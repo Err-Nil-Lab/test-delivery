@@ -14,7 +14,7 @@ export const CONFIG = {
     duskHour: 18, // peringatan "Pulang ke HQ!"
     stormHour: 20, // badai Zeus mulai memburu
     limitHour: 24, // TODO(GDD): batas akhir malam → van diderek ke HQ
-    realSecondsPerHour: 10, // 06→18 = 120 s (±2 menit per hari), 18→20 = 20 s
+    realSecondsPerHour: 7, // 06→18 = 84 s, 18→20 = 14 s (30% lebih cepat dari 120 s)
     earlyEndConfirmSeconds: 3, // tekan E lagi dalam waktu ini untuk pulang sebelum senja
   },
 
@@ -58,6 +58,7 @@ export const CONFIG = {
     capacity: 3,
     maxWaiting: 6,
     initialWaiting: 4,
+    guaranteeSpecialAtStart: true, // awal hari selalu ada min. 1 paket curse dan 1 selundupan (bila sudah boleh muncul)
     spawnInterval: 5,
     waitingLifetime: 45,
     nearRadius: 32, // selalu ada minimal 1 paket dalam radius ini
@@ -75,7 +76,7 @@ export const CONFIG = {
   // Kategori Chance: paket selundupan. Persentase scam terlihat sejak awal, bayaran naik sebanding.
   // Diundi saat diantar: legit = uang, scam = uang hangus + paket meledak (damage).
   smuggle: {
-    fromDay: 3, // GDD: Day 3 = paket selundupan pertama
+    fromDay: 1, // semua jenis paket langsung muncul sejak Day 1
     chance: 0.3,
     maxWaiting: 2,
     slots: 1,
@@ -89,7 +90,7 @@ export const CONFIG = {
 
   // Kategori Curse: paket dewa dengan efek buruk selama dibawa, hilang saat diantar.
   curse: {
-    fromDay: 2, // TODO(GDD): hari curse pertama muncul
+    fromDay: 1, // semua jenis paket langsung muncul sejak Day 1
     chance: 0.3, // peluang spawn acak menjadi paket curse
     maxWaiting: 1, // paling banyak 1 paket curse menunggu di map
     maxPerDay: 2,

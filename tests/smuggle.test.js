@@ -24,15 +24,16 @@ function deliver(game, pkg) {
 }
 
 describe('Paket selundupan (Chance)', () => {
-  it('belum muncul sebelum Day 3', () => {
+  it('tidak muncul sebelum hari pertamanya (bila diatur)', () => {
     const config = testConfig();
     config.smuggle.chance = 1;
+    config.smuggle.fromDay = 3;
     const game = gameOnDay(2, config);
     stepFor(game, 40);
     expect(game.packages.waiting.some((p) => p.type === 'smuggle')).toBe(false);
   });
 
-  it('muncul mulai Day 3 di titik acak, maksimal 2 menunggu, persentase scam terlihat', () => {
+  it('muncul di titik acak, maksimal 2 menunggu, persentase scam terlihat', () => {
     const config = testConfig();
     config.smuggle.chance = 1;
     config.curse.chance = 0;
