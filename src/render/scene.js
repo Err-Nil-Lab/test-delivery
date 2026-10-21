@@ -6,6 +6,10 @@ import { CarView } from './carView.js';
 import { MarkersView } from './markersView.js';
 import { HazardView } from './hazardView.js';
 import { MinotaurView } from './minotaurView.js';
+import { ParticlePool } from './particles.js';
+import { Popups } from './popups.js';
+import { Juice } from './juice.js';
+import { EventFx } from './fx.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
@@ -43,7 +47,7 @@ export function nightFactor(hour) {
 }
 
 export class View {
-  constructor(container, game) {
+  constructor(container, game, { calm = false } = {}) {
     this.game = game;
     this.container = container;
 
@@ -76,11 +80,16 @@ export class View {
     this.sun.shadow.bias = -0.0005;
     this.scene.add(this.sun, this.sun.target);
 
+    this.calm = calm;
+    this.juice = new Juice(game.cfg.juice, { calm });
+    this.particles = new ParticlePool(this.scene, game.cfg.juice.maxParticles);
+    this.popups = new Popups(this.scene);
     this.worldView = new WorldView(this.scene, game.world);
-    this.carView = new CarView(this.scene, game.bus);
+    this.carView = new CarView(this.scene, game.bus, this.particles);
     this.markersView = new MarkersView(this.scene, game);
     this.hazardView = new HazardView(this.scene, game.bus, game.world.heightAt);
-    this.minotaurView = new MinotaurView(this.scene, game);
+    this.minotaurView = new MinotaurView(this.scene, game, this.particles);
+    this.fx = new EventFx({ game, particles: this.particles, popups: this.popups, juice: this.juice, carView: this.carView });
 
     this.target = new THREE.Vector3(game.car.x, 0, game.car.z);
     this.flash = 0;
@@ -122,12 +131,22 @@ export class View {
     const desired = new THREE.Vector3(car.x + car.vx * 0.4, car.y ?? world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
     this.target.lerp(desired, 1 - Math.exp(-4 * dt));
     // Dionysus: kamera ikut oleng pelan.
-    const sway = this.game.effects?.steerDelay ? this.game.cfg.curse.effects.dionysus.cameraSway : 0;
+    const sway = this.game.effects?.steerDelay && !this.calm ? this.game.cfg.curse.effects.dionysus.cameraSway : 0;
     this.swayTime = (this.swayTime ?? 0) + dt;
     this.target.x += Math.sin(this.swayTime * 1.3) * sway * dt * 2;
     this.target.z += Math.cos(this.swayTime * 0.9) * sway * dt * 2;
+    // Juice: guncangan kamera dan zoom kick (tidak memengaruhi target supaya tidak bergeser).
+    this.juice.update(dt);
+    const shake = this.juice.offset;
     this.camera.position.copy(this.target).add(ISO_OFFSET);
-    this.camera.lookAt(this.target);
+    this.camera.position.x += shake.x;
+    this.camera.position.z += shake.z;
+    this.camera.lookAt(this.target.x + shake.x, this.target.y, this.target.z + shake.z);
+    const zoom = 1 + this.juice.zoom;
+    if (this.camera.zoom !== zoom) {
+      this.camera.zoom = zoom;
+      this.camera.updateProjectionMatrix();
+    }
     this.sun.position.copy(this.target).add(SUN_OFFSET);
     this.sun.target.position.copy(this.target);
 
@@ -144,6 +163,9 @@ export class View {
     this.markersView.update(dt, this.game);
     this.hazardView.update(dt, this.game);
     this.minotaurView.update(dt, this.game);
+    this.fx.update(dt);
+    this.particles.update(dt);
+    this.popups.update(dt);
   }
 
   render() {

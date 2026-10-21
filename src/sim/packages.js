@@ -69,7 +69,7 @@ export class PackageSystem {
     const expired = this.waiting.filter((p) => p.age >= p.lifetime);
     if (expired.length) {
       this.waiting = this.waiting.filter((p) => p.age < p.lifetime);
-      for (const p of expired) this.bus.emit('package_expired', { id: p.id, packageType: p.type, hour });
+      for (const p of expired) this.bus.emit('package_expired', { id: p.id, packageType: p.type, x: p.pickup.x, z: p.pickup.z, hour });
     }
 
     this.spawnTimer += dt;
@@ -96,7 +96,7 @@ export class PackageSystem {
     if (!safes.length) return;
     const farthest = safes.reduce((a, b) => (distance(b.pickup, car) > distance(a.pickup, car) ? b : a));
     this.waiting = this.waiting.filter((p) => p !== farthest);
-    this.bus.emit('package_expired', { id: farthest.id, packageType: farthest.type, hour });
+    this.bus.emit('package_expired', { id: farthest.id, packageType: farthest.type, x: farthest.pickup.x, z: farthest.pickup.z, hour });
   }
 
   // Titik yang tidak sedang dipakai paket lain (sebagai pickup maupun tujuan).

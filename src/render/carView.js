@@ -14,7 +14,7 @@ function part(geometry, material, x, y, z) {
 }
 
 export class CarView {
-  constructor(scene, bus) {
+  constructor(scene, bus, pool) {
     this.root = new THREE.Group();
     this.root.rotation.order = 'YXZ'; // heading lalu pitch tanjakan
     this.pitch = 0;
@@ -56,18 +56,15 @@ export class CarView {
     this.aura.position.y = 1.4;
     this.root.add(this.auraLight, this.aura);
 
-    this.particles = [];
-    this.particleGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    this.pool = pool;
+    this.squash = 0;
+    this.bounce = 0;
     this.scene = scene;
     this.smokeTimer = 0;
     this.sparkTimer = 0;
     this.hitFlash = 0;
-    this.landingDust = 0;
     this.time = 0;
 
-    bus.on('hard_landing', () => {
-      this.landingDust = 6;
-    });
     bus.on('strike_hit', (h) => {
       if (!h.blocked) this.hitFlash = 1;
     });
@@ -88,15 +85,8 @@ export class CarView {
     }
   }
 
-  emit(color, x, y, z, vy, life, size) {
-    const mesh = new THREE.Mesh(
-      this.particleGeo,
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }),
-    );
-    mesh.position.set(x, y, z);
-    mesh.scale.setScalar(size);
-    this.scene.add(mesh);
-    this.particles.push({ mesh, vy, life, maxLife: life, vx: (Math.random() - 0.5) * 2, vz: (Math.random() - 0.5) * 2 });
+  emit(color, x, y, z, vy, life, size, grow = 0) {
+    this.pool?.emit({ x, y, z, vx: (Math.random() - 0.5) * 2, vy, vz: (Math.random() - 0.5) * 2, life, size, color, grow });
   }
 
   update(dt, game, night) {
@@ -133,7 +123,7 @@ export class CarView {
       if (this.smokeTimer <= 0) {
         this.smokeTimer = 0.35 - damage.overflow * 0.27;
         const back = { x: car.x - fx, z: car.z - fz };
-        this.emit('#5d5d5d', back.x, world.heightAt(back.x, back.z) + 1.8, back.z, 2.5, 1.4, 0.6 + damage.overflow * 0.8);
+        this.emit('#5d5d5d', back.x, world.heightAt(back.x, back.z) + 1.8, back.z, 2.5, 1.4, 0.6 + damage.overflow * 0.8, 1.5);
       }
       if (damage.overflow > 0.3) {
         this.sparkTimer -= dt;
@@ -143,23 +133,12 @@ export class CarView {
         }
       }
     }
-    // Debu saat mendarat keras.
-    for (; this.landingDust > 0; this.landingDust--) {
-      const a = Math.random() * Math.PI * 2;
-      this.emit('#c9b79a', car.x + Math.cos(a) * 1.5, y + 0.3, car.z + Math.sin(a) * 1.5, 1.5, 0.8, 0.9);
-    }
-    for (const p of this.particles) {
-      p.life -= dt;
-      p.mesh.position.x += p.vx * dt;
-      p.mesh.position.z += p.vz * dt;
-      p.mesh.position.y += p.vy * dt;
-      p.mesh.material.opacity = Math.max(0, p.life / p.maxLife) * 0.8;
-    }
-    for (const p of this.particles.filter((q) => q.life <= 0)) {
-      this.scene.remove(p.mesh);
-      p.mesh.material.dispose();
-    }
-    this.particles = this.particles.filter((p) => p.life > 0);
+    // Juice: squash & stretch saat mendarat, kargo membal saat paket diambil.
+    this.squash = Math.max(0, this.squash - dt * 4);
+    this.bounce = Math.max(0, this.bounce - dt * 5);
+    const sq = Math.sin(this.squash * Math.PI) * 0.25;
+    this.body.scale.set(1 + sq, 1 - sq, 1 + sq);
+    this.cargo.scale.setScalar(1 + Math.sin(this.bounce * Math.PI) * 0.35);
 
     // Lampu depan menyala saat senja; aura kuning selama membawa paket Zeus.
     this.headlight.intensity = night * 260;

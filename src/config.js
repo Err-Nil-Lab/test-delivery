@@ -133,6 +133,24 @@ export const CONFIG = {
     cooldown: 2,
   },
 
+  // Suara (semua sintesis WebAudio). Mute dengan tombol M.
+  audio: {
+    enabled: true,
+    master: 0.7,
+    sfx: 0.9,
+    music: 0.35,
+    engine: 0.5,
+  },
+
+  // Juice: camera shake, hitstop, zoom kick. ?calm=1 di URL mematikan shake/zoom/sway.
+  juice: {
+    maxShake: 1.6, // unit dunia pada trauma 1
+    traumaDecay: 1.6, // per detik
+    maxZoomKick: 0.08,
+    hitstop: { bump: 0.04, ram: 0.08, blessingLost: 0.12, scam: 0.1 },
+    maxParticles: 700,
+  },
+
   storm: {
     telegraph: 1.0,
     startInterval: 2.4, // jeda sambaran badai di 20:00

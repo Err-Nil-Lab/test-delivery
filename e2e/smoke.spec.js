@@ -64,3 +64,31 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
   await expect(page.locator('.hud-day')).toContainText('DAY 2');
   expect(errors).toEqual([]);
 });
+
+test('audio: menyala setelah input pertama, musik & mesin berjalan, M untuk mute', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?seed=3');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => window.__hex.audio.ctx?.state)).toBe('running');
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(800);
+  await page.keyboard.up('KeyW');
+  const live = await page.evaluate(() => {
+    const a = window.__hex.audio;
+    return { mood: a.music.mood, master: a.master.gain.value, engineFreq: a.engine.osc.frequency.value };
+  });
+  expect(live.mood).toBe('day');
+  expect(live.master).toBeGreaterThan(0);
+  expect(live.engineFreq).toBeGreaterThan(40);
+
+  // Semua SFX bisa dimainkan di AudioContext sungguhan tanpa error.
+  await page.evaluate(() => {
+    const a = window.__hex.audio;
+    for (const name of ['pickup', 'deliver', 'bump', 'thunder', 'blessingLost', 'explosion', 'ram', 'fanfare', 'sadTrombone']) a.play(name, { strength: 1, near: 1 });
+  });
+
+  await page.keyboard.press('KeyM');
+  await expect.poll(() => page.evaluate(() => window.__hex.audio.master.gain.value), { timeout: 3000 }).toBeLessThan(0.01);
+  expect(errors).toEqual([]);
+});
