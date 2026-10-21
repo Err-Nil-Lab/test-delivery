@@ -52,6 +52,10 @@ export class Hud {
     bus.on('cargo_full', () => this.toast('Cargo penuh! Antar dulu paket yang dibawa.', 'warn'));
     bus.on('hint', ({ text }) => this.toast(text, 'hint', 6));
     bus.on('early_end_requested', () => this.toast('Masih siang. Tekan E lagi untuk pulang lebih awal.', 'warn', 3));
+    bus.on('hard_landing', () => {
+      this.hitTimer = 0.4;
+      this.toast('Aduh! Mendarat keras', 'warn', 1.5);
+    });
     bus.on('minotaur_hit', () => {
       this.hitTimer = 0.6;
       this.toast('Diseruduk Minotaur!', 'warn', 1.5);

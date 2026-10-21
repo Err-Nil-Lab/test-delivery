@@ -106,7 +106,8 @@ export class MinotaurView {
     for (const m of minotaurs.list) {
       if (!this.views.has(m.id)) this.views.set(m.id, this.create());
       const v = this.views.get(m.id);
-      v.root.position.set(m.x, 0, m.z);
+      const ground = this.game.world.heightAt(m.x, m.z);
+      v.root.position.set(m.x, ground, m.z);
       v.root.rotation.y = m.heading;
 
       const windup = m.state === MINOTAUR_STATE.WINDUP;
@@ -118,7 +119,7 @@ export class MinotaurView {
       v.arrowPivot.visible = windup || charging;
       if (v.arrowPivot.visible) {
         const len = charging ? Math.max(2, cfg.minotaur.chargeDistance - m.traveled) : chargeLength(m, cfg.minotaur.chargeDistance);
-        v.arrowPivot.position.set(m.x, 0, m.z);
+        v.arrowPivot.position.set(m.x, ground, m.z);
         v.arrowPivot.rotation.y = Math.atan2(m.dirX, m.dirZ);
         v.lane.scale.z = len;
         v.head.position.z = len;

@@ -98,12 +98,16 @@ export class Game {
 
     const impacts = this.car.update(dt, controls, {
       heightAt: this.world.heightAt,
+      slopeAt: this.world.slopeAt,
       colliders: this.world.nearbyColliders,
-      hillOverflow: this.world.hillOverflow,
       dynamic: this.minotaurs.colliders(),
     });
     this.collisionCooldown -= dt;
     for (const { speed, collider } of impacts) {
+      if (collider.landing) {
+        this.land(speed, hour);
+        continue;
+      }
       if (collider.minotaur) this.minotaurs.provoke(collider.minotaur, this.car);
       if (speed < this.cfg.damage.collisionMinImpact || this.collisionCooldown > 0) continue;
       this.collisionCooldown = this.cfg.damage.collisionCooldown;
@@ -154,6 +158,15 @@ export class Game {
     if (controls.interact) this.interact();
 
     if (this.clock.phase === PHASE.LIMIT && this.run.state === RUN_STATE.DAY) this.endDay({ towed: true });
+  }
+
+  // Terjun dari undakan: biaya repair sesuai kecepatan jatuh di atas batas aman.
+  land(fallSpeed, hour) {
+    const { landingSafeSpeed, landingCostPerSpeed } = this.cfg.damage;
+    if (fallSpeed <= landingSafeSpeed) return;
+    const cost = this.god ? 0 : (fallSpeed - landingSafeSpeed) * landingCostPerSpeed;
+    this.damage.add('landing', cost, hour);
+    this.bus.emit('hard_landing', { fallSpeed: round2(fallSpeed), cost: Math.round(cost) });
   }
 
   interact() {

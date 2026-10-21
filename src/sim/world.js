@@ -5,7 +5,7 @@
 // - bawah: Base (HQ) di kiri, perumahan di tengah, kota padat di kanan
 // Koordinat ditulis dalam piksel sketsa lalu dikonversi ke unit dunia (x = timur, z = selatan).
 import { boxCollider, segCollider, ColliderGrid, contact } from './collision.js';
-import { chaikin, ellipsePoints, resample, pointInPolygon, nearestOnPolyline, smoothstep, hash2, distance } from './geometry.js';
+import { chaikin, ellipsePoints, pointInPolygon, nearestOnPolyline, smoothstep, hash2, distance } from './geometry.js';
 
 export { distance, inRect } from './geometry.js';
 
@@ -27,8 +27,8 @@ const HILL = PP([
   [430, 470], [560, 445], [650, 415], [700, 388], [915, 388], [915, 1130], [800, 1118], [712, 1108], [620, 1140],
   [520, 1165], [430, 1162], [385, 1120], [300, 1075], [285, 900], [330, 875], [420, 830], [462, 760], [468, 680], [452, 560],
 ]);
-// Tepi gunung yang bukan batas map (dipakai untuk melandaikan kaki gunung).
-const HILL_FOOT = [...HILL.slice(5), ...HILL.slice(0, 4)];
+// Kaki gunung yang melandai ke daratan (bukan batas map dan bukan tebing laut di utara).
+const HILL_FOOT = [...HILL.slice(5), HILL[0]];
 
 const MEADOW = PP([
   [10, 770], [110, 800], [160, 880], [270, 885], [285, 900], [290, 1070], [390, 1100], [385, 1150], [300, 1180], [190, 1230], [170, 1290], [10, 1300],
@@ -42,13 +42,42 @@ const ZEUS_ZONE = PP([[520, 640], [500, 560], [560, 445], [650, 415], [700, 388]
 const SUMMIT = P(825, 470);
 const SUMMIT_RADIUS = U(620);
 const SUMMIT_HEIGHT = 16;
+// Lereng berundak: teras datar setinggi LEDGE_HEIGHT dengan tebing pendek di antaranya.
+// Jalan gunung memotong undakan dengan tanjakan mulus (dicampur sejauh ROAD_BLEND dari tepi jalan).
+export const TERRAIN = { ledgeHeight: 2.5, ledgeEdge: 0.1, roadBlend: 8 };
 
-export function heightAt(x, z) {
+// Kubah mulus: tinggi permukaan jalan gunung.
+function smoothHeight(x, z) {
   if (!pointInPolygon(HILL, x, z)) return 0;
   const base = smoothstep(0, 1, 1 - Math.hypot(x - SUMMIT.x, z - SUMMIT.z) / SUMMIT_RADIUS);
   if (base <= 0) return 0;
   const foot = smoothstep(0, 8, nearestOnPolyline(HILL_FOOT, false, x, z).dist);
   return SUMMIT_HEIGHT * base * foot;
+}
+
+function terraced(h) {
+  const { ledgeHeight: L, ledgeEdge: e } = TERRAIN;
+  const k = Math.floor(h / L);
+  return L * (k + smoothstep(1 - e, 1, h / L - k));
+}
+
+export function heightAt(x, z) {
+  const h = smoothHeight(x, z);
+  if (h <= 0) return 0;
+  // Dekat jalan dan dekat batas map medan dibuat mulus (tidak berundak) supaya van tidak terjebak.
+  const b = MAP_BOUNDS;
+  let dist = Math.min(x - b.minX, b.maxX - x, z - b.minZ, b.maxZ - z) - 4;
+  for (const r of HILL_ROADS) dist = Math.min(dist, nearestOnPolyline(r.points, r.closed, x, z).dist - r.width / 2);
+  const road = 1 - smoothstep(0, TERRAIN.roadBlend, dist);
+  return terraced(h) + (h - terraced(h)) * road;
+}
+
+// Kemiringan permukaan (gradien) di (x, z).
+export function slopeAt(x, z, e = 0.5) {
+  return {
+    x: (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e),
+    z: (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e),
+  };
 }
 
 // ---------- Jalan ----------
@@ -72,7 +101,7 @@ function buildRoads() {
   );
   const plantLoop = chaikin(PP([[765, 420], [885, 420], [885, 525], [765, 525]]), 2, true);
 
-  return [
+  const roads = [
     // Istana Zeus
     road('palace-ring', 'ring', ellipsePoints(PALACE.x, PALACE.z, PALACE_RING_R, PALACE_RING_R, 72), { closed: true, dashed: true }),
     road('palace-court', 'street', ellipsePoints(PALACE.x, PALACE.z, PALACE_COURT_R, PALACE_COURT_R, 48), { closed: true }),
@@ -105,7 +134,11 @@ function buildRoads() {
     // Jalan setapak di tepi barat dan selatan
     road('perimeter', 'path', PP([[45, 580], [45, 1300], [45, 1480], [110, 1580], [230, 1640], [480, 1655], [560, 1640]])),
   ];
+  return roads;
 }
+
+const ROADS = buildRoads();
+const HILL_ROADS = ROADS.filter((r) => r.hill);
 
 function nearestRoad(roads, x, z) {
   let best = null;
@@ -164,11 +197,11 @@ const CITY_NAMES = [
 ];
 
 export function createWorld() {
-  const roads = buildRoads();
+  const roads = ROADS;
   const byId = Object.fromEntries(roads.map((r) => [r.id, r]));
   const cityRoads = ['city-ring', 'city-avenue', 'city-inner', 'city-diag-w', 'city-diag-e', 'city-south', 'main-ew'].map((id) => byId[id]);
   const housingRoads = ['housing-ring', 'housing-ns', 'housing-n', 'housing-s', 'main-ew'].map((id) => byId[id]);
-  const hillRoads = roads.filter((r) => r.hill);
+  const hillRoads = HILL_ROADS;
 
   // ---------- Gedung ----------
   const buildings = [];
@@ -202,6 +235,16 @@ export function createWorld() {
 
   const shrineCenter = P(512, 700);
   buildings.push({ kind: 'shrine', cx: shrineCenter.x, cz: shrineCenter.z, hw: 3.5, hd: 3.5, rot: 0, height: 4 });
+
+  // Gubuk di lereng (open field), di luar jalan:
+  // - Gembala: teras di zona petir, dicapai dengan turun dari baris jalan berkelok di atasnya.
+  // - Penebang: dataran rendah yang dijaga Minotaur ketiga.
+  const shepherdHut = P(800, 697);
+  const woodcutterHut = P(440, 1010);
+  buildings.push(
+    { kind: 'hut', cx: shepherdHut.x, cz: shepherdHut.z, hw: 2.2, hd: 2.2, rot: 0, height: 2.6 },
+    { kind: 'hut', cx: woodcutterHut.x, cz: woodcutterHut.z, hw: 2.6, hd: 2.2, rot: 0, height: 2.8 },
+  );
 
   const cityLots = generateLots({
     center: CITY,
@@ -246,6 +289,8 @@ export function createWorld() {
     { id: 'lm-housing', name: 'Pos Perumahan', district: 'housing', ...curbPoint([byId['main-ew']], P(300, 1350)) },
     { id: 'lm-square', name: 'Alun-alun Kota', district: 'city', ...curbPoint([byId['main-ew']], P(760, 1330)) },
     { id: 'lm-shrine', name: 'Kuil Gunung', district: 'mountain', ...curbPoint([byId.serpentine], shrineCenter) },
+    { id: 'hut-shepherd', name: 'Gubuk Gembala', district: 'field', ...P(770, 697) },
+    { id: 'hut-woodcutter', name: 'Gubuk Penebang', district: 'field', ...P(440, 1040) },
   );
 
   const zeusPickup = { id: 'palace-gate', name: 'Gerbang Istana Zeus', district: 'palace', ...P(212, 636) };
@@ -267,20 +312,15 @@ export function createWorld() {
     segCollider(b.maxX, b.minZ, b.maxX, b.maxZ, 1),
   );
   for (let i = 0; i < COAST.length - 1; i++) colliders.push(segCollider(COAST[i].x, COAST[i].z, COAST[i + 1].x, COAST[i + 1].z, 0.5));
+  // Tebing laut: sisi utara gunung langsung jatuh ke laut.
+  for (let i = 0; i < 3; i++) colliders.push(segCollider(HILL[i].x, HILL[i].z, HILL[i + 1].x, HILL[i + 1].z, 0.5, { seaCliff: true }));
 
-  // Tebing: kaki gunung tidak bisa dilewati kecuali lewat jalan.
-  const cliff = resample(HILL, 3, true);
-  for (let i = 0; i < cliff.length; i++) {
-    const a = cliff[i];
-    const c = cliff[(i + 1) % cliff.length];
-    if (!clearOfRoads(hillRoads, (a.x + c.x) / 2, (a.z + c.z) / 2, 2.5)) continue;
-    colliders.push(segCollider(a.x, a.z, c.x, c.z, 0.4, { cliff: true }));
-  }
   const grid = new ColliderGrid(colliders);
 
   const minotaurSpawns = [
     { id: 'west', ...P(80, 1010), territory: rectPx(15, 820, 170, 1250) },
     { id: 'east', ...P(215, 1000), territory: rectPx(128, 880, 280, 1170) },
+    { id: 'woodcutter', ...P(480, 990), territory: rectPx(360, 950, 520, 1095) },
   ];
 
   return {
@@ -312,30 +352,15 @@ export function createWorld() {
       serpentineTop: P(740, 640),
       cityRoad: P(600, 1315),
       meadow: P(215, 1000),
+      shepherdHut: P(770, 697),
+      woodcutterHut: P(440, 1040),
     },
     heightAt,
+    slopeAt,
     inZeusZone: (x, z) => pointInPolygon(ZEUS_ZONE, x, z),
+    inHill: (x, z) => pointInPolygon(HILL, x, z),
     nearbyColliders: (x, z, r) => grid.query(x, z, r),
-    hillOverflow: (x, z, radius) => hillOverflow(hillRoads, x, z, radius),
-    isBlocked: (x, z, radius) => isBlocked(grid, hillRoads, x, z, radius),
+    // Tertutup gedung / pantai / batas map (tinggi medan ditangani terpisah oleh fisika van).
+    isBlocked: (x, z, radius) => grid.query(x, z, radius + 1).some((c) => contact(x, z, radius, c)),
   };
-}
-
-// Di gunung van hanya boleh berada di atas jalan. Mengembalikan seberapa jauh van keluar jalur
-// (over > 0 berarti keluar), atau null bila van tidak di gunung.
-function hillOverflow(hillRoads, x, z, radius) {
-  if (!pointInPolygon(HILL, x, z)) return null;
-  let best = null;
-  for (const r of hillRoads) {
-    const n = nearestOnPolyline(r.points, r.closed, x, z);
-    const over = n.dist - (r.width / 2 - radius * 0.5);
-    if (!best || over < best.over) best = { ...n, over };
-  }
-  return best;
-}
-
-function isBlocked(grid, hillRoads, x, z, radius) {
-  for (const c of grid.query(x, z, radius + 1)) if (contact(x, z, radius, c)) return true;
-  const o = hillOverflow(hillRoads, x, z, radius);
-  return o !== null && o.over > 0;
 }

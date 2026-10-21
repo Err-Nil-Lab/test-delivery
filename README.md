@@ -14,7 +14,8 @@ Map dibuat dari sketsa kasar tim (utara = atas):
 | Wilayah | Isi |
 |---|---|
 | **Istana Zeus** (kiri atas) | Ring road besar mengelilingi plaza luas. Di tengah ada halaman marmer dengan dua sayap istana, ramp "steep" ke tenggara, dan aula panjang di barat laut. Laut Aegea di utaranya. **Paket Zeus selalu diambil di Gerbang Istana.** |
-| **Gunung Olympus** (kanan atas) | Jalan berkelok dengan hairpin, menanjak sampai **Electrical Plant** di puncak. Lereng di luar jalan terlalu curam, jadi tidak bisa dilewati. Tanjakan memperlambat van dan turunan mempercepatnya. Seluruh lereng ini zona petir. Ada Kuil Gunung di tengah jalan. |
+| **Gunung Olympus** (kanan atas) | Jalan berkelok dengan hairpin, menanjak sampai **Electrical Plant** di puncak. Lereng di luar jalan berupa **teras berundak** yang bisa dijelajahi. Undakan terlalu tinggi untuk dinaiki (van menabraknya seperti tembok), jadi **naik ke plant hanya bisa lewat jalan**. Turun boleh nekat lewat lereng: van melayang dari undakan dan **mendarat keras dengan damage**. Lereng atas adalah zona petir. Ada Kuil Gunung di tengah jalan. |
+| **Gubuk di lereng** | **Gubuk Gembala** ada di teras dalam zona petir; untuk sampai ke sana, keluar dari baris jalan berkelok di atasnya lalu turun ke terasnya. **Gubuk Penebang** ada di dataran rendah antara kaki gunung dan jalan diagonal, dijaga Minotaur ketiga. |
 | **Padang Minotaur** (tengah kiri) | Lapangan terbuka yang dilewati jalan dari Base ke istana. Di sini ada 2 Minotaur. |
 | **Base** (kiri bawah) | HQ Hermes Express dan lot parkir. |
 | **Perumahan Arcadia** (bawah tengah) | Rumah-rumah kecil di dalam ring road. |
@@ -61,7 +62,7 @@ URL bisa diberi parameter:
 | Petir zona Zeus | Selalu ada tanda di tanah ~1 detik sebelum menyambar. Jatuh di sekitar van selama van berada di lereng gunung |
 | Minotaur | Berkeliaran di padang. Kalau van masuk jangkauannya, Minotaur ancang-ancang ~0,9 detik (panah merah di tanah menunjukkan jalurnya, ditambah tanda "!"), lalu menyeruduk lurus. Kalau kena, van terpental dan tergelincir, lalu Minotaur pusing sebentar. Menabrak Minotaur yang sedang tenang juga membuatnya marah |
 | Badai pemburu | Mulai 20:00, menyasar posisi van di seluruh kota, makin rapat sampai van masuk HQ |
-| Damage | Tanpa HP. Tabrakan, petir, dan serudukan Minotaur menambah tagihan repair. Van punya 3 state visual; setelah state 3 muncul asap dan percikan. Angkanya baru terlihat di laporan |
+| Damage | Tanpa HP. Tabrakan (termasuk menabrak undakan), petir, serudukan Minotaur, dan pendaratan keras menambah tagihan repair. Van punya 3 state visual; setelah state 3 muncul asap dan percikan. Angkanya baru terlihat di laporan |
 | Laporan | Income − damage − 10% bayaran paket yang masih dibawa (− biaya derek) = profit. Profit ≥ quota → lanjut, kurang → ulang dari Day 1 |
 | Run | 7 hari. Day 1 di run pertama di-script sebagai tutorial: paket Zeus dijamin menunggu di Gerbang Istana, dan panah ⚡ menunjukkan arahnya |
 
@@ -72,7 +73,8 @@ Semua angka ada di [`src/config.js`](src/config.js). Nilai bertanda `TODO(GDD)` 
 - **Batas akhir malam:** jam 24:00 van diderek otomatis ke HQ dengan biaya derek $300.
 - **Undelivered offering:** denda 10% dari bayaran tiap paket yang masih dibawa saat hari berakhir.
 - **Quota per hari:** $200 → $800 (naik $100 per hari).
-- **Biaya damage:** petir $60, badai $80, Minotaur $100, tabrakan $3 per unit kecepatan tumbukan (di atas 5).
+- **Biaya damage:** petir $60, badai $80, Minotaur $100, tabrakan $3 per unit kecepatan tumbukan (di atas 5), pendaratan $10 per unit kecepatan jatuh di atas 7. Turun satu undakan (±2,5 unit) sekitar $50.
+- **Medan:** tinggi undakan 2,5 (`TERRAIN` di `src/sim/world.js`), batas panjat `car.maxClimbSlope` 0,35. Jalan gunung paling curam 0,18, jadi selalu bisa dinaiki.
 - **Minotaur aktif mulai Day 1** (`minotaur.activeFromDay`). Ubah ke 2 kalau ingin tutorial Day 1 tanpa Minotaur.
 
 Karena map ini lebih besar, satu hari dibuat 2 menit sampai senja dan kecepatan van dinaikkan ke 22. Dari panjang jalannya, satu perjalanan Zeus pulang-pergi (Base → istana → puncak → Base) diperkirakan makan sekitar setengah hari, jadi mengambil paket Zeus adalah keputusan besar. Angka ini belum diuji dengan pemain.
@@ -81,7 +83,7 @@ Karena map ini lebih besar, satu hari dibuat 2 menit sampai senja dan kecepatan 
 
 Panel debug (<kbd>`</kbd>) berisi time scale, lompat ke 17:30/18:00/20:00/23:45, beri paket Zeus, teleport (HQ, Gerbang Istana, Padang Minotaur, kaki gunung, plant), god mode, dan akhiri hari.
 
-Selama bermain, game mencatat event playtest: pickup, deliver, blessing didapat/hilang, sambaran yang kena, serudukan Minotaur, tabrakan, pergantian fase, jam pulang, dan ringkasan laporan. Setiap event membawa hari dan jam in-game. Log bisa diunduh sebagai JSON dari layar pause atau layar menang. Data ini membantu menjawab H2, misalnya apakah pemain masih mengambil paket setelah 17:00 dan jam berapa mereka pulang.
+Selama bermain, game mencatat event playtest: pickup, deliver, blessing didapat/hilang, sambaran yang kena, serudukan Minotaur, pendaratan keras, tabrakan, pergantian fase, jam pulang, dan ringkasan laporan. Setiap event membawa hari dan jam in-game. Log bisa diunduh sebagai JSON dari layar pause atau layar menang. Data ini membantu menjawab H2, misalnya apakah pemain masih mengambil paket setelah 17:00 dan jam berapa mereka pulang.
 
 ### Membagikan untuk playtest online
 
@@ -119,7 +121,7 @@ e2e/               smoke test di browser (Playwright)
 ## Tes
 
 ```bash
-npm test                       # unit test logika + map (semua titik bisa dicapai dari HQ, jalan gunung bisa dilalui)
+npm test                       # unit test logika + map (semua titik bisa dicapai, van tidak bisa terjebak, plant hanya lewat jalan)
 npx playwright install chromium   # sekali saja, untuk e2e
 npm run test:e2e               # smoke test: intro → Zeus → blessing hilang → senja → badai → laporan → Day 2
 ```

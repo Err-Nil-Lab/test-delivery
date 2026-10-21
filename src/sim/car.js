@@ -1,5 +1,6 @@
 // Van arcade: gas/rem/mundur, belokan bergantung kecepatan, grip lateral, tanjakan,
-// collision dengan gedung/tebing/Minotaur, dan impuls (serudukan Minotaur).
+// collision dengan gedung/pantai/Minotaur, impuls (serudukan Minotaur), dan medan berundak:
+// undakan terlalu tinggi = tembok saat menanjak; saat menurun van melayang lalu mendarat.
 // heading 0 = menghadap +z; forward = (sin h, cos h).
 import { contact } from './collision.js';
 
@@ -22,6 +23,9 @@ export class Car {
     this.vz = 0;
     this.spin = 0;
     this.slide = 0; // detik grip berkurang setelah kena impuls
+    this.y = null; // diisi dari tinggi medan pada update berikutnya
+    this.vy = 0;
+    this.airborne = false;
   }
 
   get radius() {
@@ -37,13 +41,38 @@ export class Car {
   }
 
   get stopped() {
-    return this.speed < this.cfg.stopSpeed;
+    return !this.airborne && this.speed < this.cfg.stopSpeed;
   }
 
   // controls: { throttle: -1..1, steer: -1..1 (positif = kiri) }.
-  // env: { heightAt, colliders: (x, z, r) => [], hillOverflow, dynamic: [] }.
+  // env: { heightAt, slopeAt, colliders: (x, z, r) => [], dynamic: [] }.
   // Mengembalikan daftar tumbukan { speed, collider }.
   update(dt, controls, env = {}) {
+    const ground = env.heightAt ?? (() => 0);
+    if (this.y === null) this.y = ground(this.x, this.z);
+    const prevX = this.x;
+    const prevZ = this.z;
+    const prevY = this.y;
+    if (this.airborne) this.fly(dt);
+    else this.drive(dt, controls, ground);
+
+    const nearby = env.colliders ? env.colliders(this.x, this.z, this.radius + 1) : [];
+    const impacts = this.resolveCollisions([...nearby, ...(env.dynamic ?? [])]);
+    this.followTerrain(ground, env.slopeAt, prevX, prevZ, prevY, impacts);
+    return impacts;
+  }
+
+  // Di udara: tidak bisa menyetir atau ngegas, hanya jatuh.
+  fly(dt) {
+    this.vy -= this.cfg.fallGravity * dt;
+    this.y += this.vy * dt;
+    this.heading += this.spin * dt;
+    this.spin *= Math.exp(-this.cfg.spinDamping * dt);
+    this.x += this.vx * dt;
+    this.z += this.vz * dt;
+  }
+
+  drive(dt, controls, ground) {
     const c = this.cfg;
     let fx = Math.sin(this.heading);
     let fz = Math.cos(this.heading);
@@ -61,10 +90,8 @@ export class Car {
     if (fwd > c.maxSpeed) fwd = approach(fwd, c.maxSpeed, c.coastDrag * dt);
 
     // Tanjakan: menanjak melambat, menurun bertambah cepat.
-    if (env.heightAt) {
-      const slope = (env.heightAt(this.x + fx, this.z + fz) - env.heightAt(this.x - fx, this.z - fz)) / 2;
-      fwd -= c.gravity * slope * dt;
-    }
+    const slope = (ground(this.x + fx, this.z + fz) - ground(this.x - fx, this.z - fz)) / 2;
+    fwd -= c.gravity * slope * dt;
 
     this.slide = Math.max(0, this.slide - dt);
     const grip = this.slide > 0 ? c.lateralGrip * c.slideGrip : c.lateralGrip;
@@ -80,11 +107,51 @@ export class Car {
     this.vz = fz * fwd + fx * lat;
     this.x += this.vx * dt;
     this.z += this.vz * dt;
+  }
 
-    const nearby = env.colliders ? env.colliders(this.x, this.z, this.radius + 1) : [];
-    const impacts = this.resolveCollisions([...nearby, ...(env.dynamic ?? [])]);
-    if (env.hillOverflow) impacts.push(...this.stayOnHillRoad(env.hillOverflow));
-    return impacts;
+  followTerrain(ground, slopeAt, prevX, prevZ, prevY, impacts) {
+    const c = this.cfg;
+    const g = ground(this.x, this.z);
+    const tolerance = c.maxClimbSlope * Math.hypot(this.x - prevX, this.z - prevZ) + 0.02;
+
+    // Undakan terlalu tinggi untuk dinaiki: seperti menabrak tembok, van bisa menyusurinya.
+    // (Saat melayang dibandingkan dengan tinggi sebelum jatuh di frame ini, supaya mendarat tidak dikira menabrak.)
+    if (g > prevY + tolerance) {
+      let nx = prevX - this.x;
+      let nz = prevZ - this.z;
+      if (slopeAt) {
+        const s = slopeAt(this.x, this.z);
+        nx = -s.x;
+        nz = -s.z;
+      }
+      const d = Math.hypot(nx, nz) || 1;
+      this.x = prevX;
+      this.z = prevZ;
+      if (!this.airborne) this.y = ground(prevX, prevZ);
+      this.push(nx / d, nz / d, 0, { ledge: true }, impacts);
+      return;
+    }
+
+    if (this.airborne) {
+      if (this.y > g) return;
+      // Mendarat: makin tinggi jatuhnya, makin keras.
+      const fall = -this.vy;
+      this.y = g;
+      this.vy = 0;
+      this.airborne = false;
+      this.vx *= c.landingFriction;
+      this.vz *= c.landingFriction;
+      if (fall > 0) impacts.push({ speed: fall, collider: { landing: true } });
+      return;
+    }
+
+    // Tanah turun lebih curam daripada yang bisa diikuti roda: van melayang.
+    if (g < this.y - tolerance) {
+      this.airborne = true;
+      this.vy = 0;
+      return;
+    }
+    this.y = g;
   }
 
   push(nx, nz, depth, collider, impacts) {
@@ -106,16 +173,6 @@ export class Car {
       const hit = contact(this.x, this.z, this.radius, collider);
       if (hit) this.push(hit.nx, hit.nz, hit.depth, collider, impacts);
     }
-    return impacts;
-  }
-
-  // Lereng gunung terlalu curam: van didorong kembali ke tepi jalan.
-  stayOnHillRoad(hillOverflow) {
-    const impacts = [];
-    const o = hillOverflow(this.x, this.z, this.radius);
-    if (!o || o.over <= 0) return impacts;
-    const d = Math.max(o.dist, 1e-6);
-    this.push(-(this.x - o.x) / d, -(this.z - o.z) / d, o.over, { cliff: true }, impacts);
     return impacts;
   }
 

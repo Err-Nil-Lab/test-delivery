@@ -109,14 +109,14 @@ export class View {
 
   snapCamera() {
     const { car, world } = this.game;
-    this.target.set(car.x, world.heightAt(car.x, car.z), car.z);
+    this.target.set(car.x, car.y ?? world.heightAt(car.x, car.z), car.z);
   }
 
   update(dt) {
     const { car, clock, world } = this.game;
 
     // Kamera mengikuti van dengan sedikit look-ahead ke arah gerak.
-    const desired = new THREE.Vector3(car.x + car.vx * 0.4, world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
+    const desired = new THREE.Vector3(car.x + car.vx * 0.4, car.y ?? world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
     this.target.lerp(desired, 1 - Math.exp(-4 * dt));
     this.camera.position.copy(this.target).add(ISO_OFFSET);
     this.camera.lookAt(this.target);

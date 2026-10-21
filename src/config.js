@@ -36,6 +36,9 @@ export const CONFIG = {
     gravity: 25, // pengaruh tanjakan: menanjak melambat, menurun bertambah cepat
     slideGrip: 0.15, // grip lateral saat tergelincir setelah diseruduk
     slideSeconds: 0.6,
+    maxClimbSlope: 0.35, // tanjakan lebih curam dari ini (di luar jalan) = tembok
+    fallGravity: 30, // gravitasi saat van melayang turun dari undakan
+    landingFriction: 0.8,
   },
 
   damage: {
@@ -45,6 +48,8 @@ export const CONFIG = {
     lightning: 60, // TODO(GDD): biaya repair per sambaran
     storm: 80,
     minotaur: 100, // TODO(GDD): biaya repair per serudukan
+    landingSafeSpeed: 7, // kecepatan jatuh yang masih aman saat mendarat
+    landingCostPerSpeed: 10, // TODO(GDD): $ per unit kecepatan jatuh di atas batas aman
     towFee: 300, // TODO(GDD): biaya derek saat menyentuh batas malam
     stateThresholds: [150, 400], // total $ untuk state 2 (penyok) dan 3 (rusak berat)
   },

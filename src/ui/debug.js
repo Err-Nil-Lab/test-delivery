@@ -18,6 +18,8 @@ export function createDebugPanel(game, { visible }) {
     'Teleport: Padang Minotaur': () => teleport(game.world.ref.meadow),
     'Teleport: kaki gunung': () => teleport(game.world.ref.serpentineFoot),
     'Teleport: plant': () => teleport(game.world.plant.dropoff),
+    'Teleport: Gubuk Gembala': () => teleport(game.world.ref.shepherdHut),
+    'Teleport: Gubuk Penebang': () => teleport(game.world.ref.woodcutterHut),
     'Akhiri hari sekarang': () => game.endDay(),
   };
   gui.add(state, 'info').name('Info').disable().listen();

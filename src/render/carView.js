@@ -61,8 +61,12 @@ export class CarView {
     this.smokeTimer = 0;
     this.sparkTimer = 0;
     this.hitFlash = 0;
+    this.landingDust = 0;
     this.time = 0;
 
+    bus.on('hard_landing', () => {
+      this.landingDust = 6;
+    });
     bus.on('strike_hit', (h) => {
       if (!h.blocked) this.hitFlash = 1;
     });
@@ -99,9 +103,13 @@ export class CarView {
     this.time += dt;
     const fx = Math.sin(car.heading) * 1.8;
     const fz = Math.cos(car.heading) * 1.8;
-    const targetPitch = Math.atan2(world.heightAt(car.x + fx, car.z + fz) - world.heightAt(car.x - fx, car.z - fz), 3.6);
+    // Di udara hidung van menunduk; di tanah mengikuti kemiringan.
+    const targetPitch = car.airborne
+      ? Math.max(-0.5, car.vy * 0.03)
+      : Math.atan2(world.heightAt(car.x + fx, car.z + fz) - world.heightAt(car.x - fx, car.z - fz), 3.6);
     this.pitch += (targetPitch - this.pitch) * (1 - Math.exp(-12 * dt));
-    this.root.position.set(car.x, world.heightAt(car.x, car.z), car.z);
+    const y = car.y ?? world.heightAt(car.x, car.z);
+    this.root.position.set(car.x, y, car.z);
     this.root.rotation.y = car.heading;
     this.root.rotation.x = -this.pitch;
 
@@ -130,9 +138,14 @@ export class CarView {
         this.sparkTimer -= dt;
         if (this.sparkTimer <= 0) {
           this.sparkTimer = 0.5 - damage.overflow * 0.35;
-          this.emit('#ffb347', car.x, world.heightAt(car.x, car.z) + 0.6, car.z, 4, 0.4, 0.25);
+          this.emit('#ffb347', car.x, y + 0.6, car.z, 4, 0.4, 0.25);
         }
       }
+    }
+    // Debu saat mendarat keras.
+    for (; this.landingDust > 0; this.landingDust--) {
+      const a = Math.random() * Math.PI * 2;
+      this.emit('#c9b79a', car.x + Math.cos(a) * 1.5, y + 0.3, car.z + Math.sin(a) * 1.5, 1.5, 0.8, 0.9);
     }
     for (const p of this.particles) {
       p.life -= dt;

@@ -12,6 +12,9 @@ const COLORS = {
   plaza: '#77787f',
   court: '#e6e0d2',
   hillLow: '#aaa572',
+  rock: '#8a8478',
+  wood: '#8b6844',
+  thatch: '#c9a85c',
   hillHigh: '#ece9dc',
   zoneTint: '#ffd84a',
   city: ['#cfc7d9', '#c3bbd1', '#d9d1e1', '#bab2c9'],
@@ -160,9 +163,9 @@ export class WorldView {
   // Gunung: grid bertinggi dipotong sesuai polygon gunung, warna makin terang ke puncak,
   // dan sedikit kekuningan di zona petir.
   addTerrain() {
-    const { regions, heightAt, inZeusZone } = this.world;
+    const { regions, heightAt, slopeAt, inZeusZone } = this.world;
     const bb = polygonBounds(regions.hill);
-    const cell = 2;
+    const cell = 1;
     const nx = Math.ceil((bb.maxX - bb.minX) / cell) + 1;
     const nz = Math.ceil((bb.maxZ - bb.minZ) / cell) + 1;
     const positions = [];
@@ -170,6 +173,7 @@ export class WorldView {
     const low = new THREE.Color(COLORS.hillLow);
     const high = new THREE.Color(COLORS.hillHigh);
     const tint = new THREE.Color(COLORS.zoneTint);
+    const rock = new THREE.Color(COLORS.rock);
     const c = new THREE.Color();
     for (let j = 0; j < nz; j++) {
       for (let i = 0; i < nx; i++) {
@@ -178,6 +182,9 @@ export class WorldView {
         const h = heightAt(x, z);
         positions.push(x, h + 0.01, z);
         c.copy(low).lerp(high, Math.min(1, (h / 16) ** 1.5));
+        // Sisi undakan yang curam berwarna batu.
+        const s = h > 0 ? slopeAt(x, z) : { x: 0, z: 0 };
+        c.lerp(rock, Math.min(1, Math.max(0, Math.hypot(s.x, s.z) - 0.3) * 1.5));
         if (inZeusZone(x, z)) c.lerp(tint, 0.12);
         colors.push(c.r, c.g, c.b);
       }
@@ -314,6 +321,12 @@ export class WorldView {
         const sign = label('⚡ ELECTRICAL PLANT', 'world-label plant');
         sign.position.set(0, b.height + 20, 0);
         group.add(sign);
+      } else if (b.kind === 'hut') {
+        const wood = new THREE.MeshStandardMaterial({ color: COLORS.wood, roughness: 1 });
+        add(new THREE.Mesh(new THREE.BoxGeometry(w, b.height, d), wood), 0, b.height / 2, 0);
+        const roof = add(new THREE.Mesh(new THREE.ConeGeometry(Math.max(b.hw, b.hd) * 1.6, 1.8, 4), new THREE.MeshStandardMaterial({ color: COLORS.thatch })), 0, b.height + 0.9, 0);
+        roof.rotation.y = Math.PI / 4;
+        add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.6, 0.1), new THREE.MeshStandardMaterial({ color: '#3d2b1c' })), 0, 0.8, b.hd + 0.05);
       } else if (b.kind === 'shrine') {
         add(new THREE.Mesh(new THREE.BoxGeometry(w, 0.6, d), mats.palace), 0, 0.3, 0);
         const colGeo = new THREE.CylinderGeometry(0.3, 0.35, b.height, 8);
@@ -337,7 +350,7 @@ export class WorldView {
 
   // Gedung yang menutupi van dari sudut kamera dibuat transparan.
   updateOcclusion(dt, car, cameraOffset) {
-    const carY = this.world.heightAt(car.x, car.z) + 1.2;
+    const carY = (car.y ?? this.world.heightAt(car.x, car.z)) + 1.2;
     rayDir.copy(cameraOffset).normalize();
     const near = this.occluders.filter((o) => Math.abs(o.x - car.x) < 45 && Math.abs(o.z - car.z) < 45);
     const meshes = near.flatMap((o) => o.parts);
