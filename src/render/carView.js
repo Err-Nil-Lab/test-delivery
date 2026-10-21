@@ -1,6 +1,7 @@
 // Van Hermes Express: kotak graybox, kargo di atap, lampu depan, aura blessing,
 // dan tanda damage (3 state + asap/percikan setelah state 3).
 import * as THREE from 'three';
+import { CURSES } from '../sim/curses.js';
 
 const BODY_COLORS = { 1: '#f2f2ee', 2: '#c9c2b0', 3: '#8d7660' };
 const SLOT_Z = [1.15, 0, -1.15];
@@ -163,11 +164,18 @@ export class CarView {
     // Lampu depan menyala saat senja; aura kuning selama membawa paket Zeus.
     this.headlight.intensity = night * 260;
     this.lampMat.emissiveIntensity = 0.2 + night * 2.5;
-    const blessed = packages.blessed;
+    // Aura: kuning untuk blessing Zeus, warna dewa untuk paket curse.
+    const effects = game.effects ?? packages.effects;
+    const blessed = effects.lightningImmune;
+    const auraColor = blessed ? '#ffe066' : effects.curses.length ? CURSES[effects.curses[effects.curses.length - 1]].color : null;
     const pulse = 0.5 + 0.5 * Math.sin(this.time * 5);
-    this.aura.visible = blessed;
+    this.aura.visible = auraColor !== null;
+    if (auraColor) {
+      this.aura.material.color.set(auraColor);
+      this.auraLight.color.set(auraColor);
+    }
     this.aura.material.opacity = 0.1 + pulse * 0.1;
     this.aura.scale.setScalar(1 + pulse * 0.08);
-    this.auraLight.intensity = blessed ? 60 + night * 140 : 0;
+    this.auraLight.intensity = auraColor ? 60 + night * 140 : 0;
   }
 }

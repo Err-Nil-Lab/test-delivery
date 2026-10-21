@@ -1,6 +1,7 @@
 // HUD DOM: jam, hari, quota, cargo, blessing, prompt E, banner, hint, dan panah arah.
 import { formatHour, PHASE } from '../sim/clock.js';
 import { Minimap } from './minimap.js';
+import { CURSES, packageLook } from '../sim/curses.js';
 
 const PHASE_ICONS = { [PHASE.DAY]: '☀', [PHASE.DUSK]: '🌇', [PHASE.STORM]: '⛈', [PHASE.LIMIT]: '⛈' };
 
@@ -27,12 +28,15 @@ export class Hud {
     this.cargoEl = el('div', 'hud-cargo', right);
     this.blessingEl = el('div', 'hud-blessing', right);
     this.blessingEl.textContent = '⚡ Blessing Zeus · kebal petir';
+    this.cursesEl = el('div', 'hud-curses', right);
 
     this.promptEl = el('div', 'hud-prompt', this.root);
     this.bannerEl = el('div', 'hud-banner', this.root);
     this.toastsEl = el('div', 'hud-toasts', this.root);
     this.arrowsEl = el('div', 'hud-arrows', this.root);
     this.vignetteEl = el('div', 'hud-vignette', this.root);
+    // Hades: pandangan menyempit ke lingkaran di sekitar van.
+    this.darknessEl = el('div', 'hud-darkness', this.root);
     this.minimap = new Minimap(this.root, game);
     this.arrows = new Map();
     this.bannerTimer = 0;
@@ -48,7 +52,19 @@ export class Hud {
     bus.on('blessing_gained', () => this.banner('⚡ Blessing Zeus', 'Kebal petir selama paket ini dibawa', 'zeus', 2.5));
     bus.on('blessing_lost', () => this.banner('The blessing belonged to the package, not you.', 'Blessing Zeus hilang. Petir bisa mengenaimu lagi.', 'lost', 4));
     bus.on('deliver', ({ pay, dest }) => this.toast(`+$${pay} · ${dest}`, 'money'));
-    bus.on('pickup', ({ packageType, dest }) => this.toast(`Paket ${packageType === 'zeus' ? '⚡ Zeus' : 'Safe'} diambil → ${dest}`));
+    bus.on('pickup', ({ packageType, curse, dest }) => {
+      const look = packageLook({ type: packageType, curse });
+      this.toast(`Paket ${look.icon} ${look.name} diambil → ${dest}`);
+    });
+    bus.on('curse_gained', ({ curse }) => {
+      const c = CURSES[curse];
+      this.banner(`${c.icon} Kutukan ${c.god}`, `${c.title}: ${c.desc}. Hilang saat paket diantar.`, `curse ${curse}`, 3);
+    });
+    bus.on('curse_lifted', ({ curse }) => {
+      const c = CURSES[curse];
+      this.banner('The curse belonged to the package too.', `Kutukan ${c.god} terangkat. Lega!`, 'lifted', 3);
+    });
+    bus.on('minotaur_charmed', () => this.toast('💘 Minotaur jatuh cinta padamu…', 'curse', 2));
     bus.on('cargo_full', () => this.toast('Cargo penuh! Antar dulu paket yang dibawa.', 'warn'));
     bus.on('hint', ({ text }) => this.toast(text, 'hint', 6));
     bus.on('early_end_requested', () => this.toast('Masih siang. Tekan E lagi untuk pulang lebih awal.', 'warn', 3));
@@ -103,7 +119,8 @@ export class Hud {
       }
       if (action.kind === 'full') return `Cargo penuh: paket ini butuh ${action.pkg.slots} slot`;
       const p = action.pkg;
-      const kind = p.type === 'zeus' ? '⚡ Zeus' : 'Safe';
+      const look = packageLook(p);
+      const kind = `${look.icon} ${look.name}`.trim();
       return car.stopped ? `<kbd>E</kbd> Ambil paket ${kind} $${p.pay} → ${p.dest.name}` : 'Berhenti untuk mengambil paket';
     }
     if (game.inHQ && game.leftHQ) {
@@ -114,6 +131,16 @@ export class Hud {
     return '';
   }
 
+  updateDarkness(radius) {
+    this.darknessEl.style.opacity = radius ? '1' : '0';
+    if (!radius) return;
+    const { car } = this.game;
+    const c = this.view.project(car.x, car.z);
+    const edge = this.view.project(car.x + radius, car.z);
+    const r = Math.max(60, Math.hypot(edge.x - c.x, edge.y - c.y));
+    this.darknessEl.style.background = `radial-gradient(circle at ${c.x}px ${c.y}px, transparent ${r * 0.6}px, rgba(5, 6, 12, 0.96) ${r}px)`;
+  }
+
   arrowTargets() {
     const { game } = this;
     const targets = game.packages.cargo.map((p) => ({
@@ -121,7 +148,7 @@ export class Hud {
       x: p.dest.x,
       z: p.dest.z,
       label: p.dest.name,
-      kind: p.type === 'zeus' ? 'zeus' : 'dest',
+      kind: p.type === 'zeus' ? 'zeus' : p.type === 'curse' ? `curse ${p.curse}` : 'dest',
     }));
     const zeusWaiting = game.packages.waiting.find((p) => p.type === 'zeus');
     if (zeusWaiting && !game.packages.blessed) {
@@ -181,10 +208,20 @@ export class Hud {
     this.setHtml(this.moneyEl, `Hari ini <b>$${packages.income}</b> · Quota <b>$${run.quota}</b>`);
 
     const slots = [];
-    for (const p of packages.cargo) slots.push(`<span class="slot ${p.type}" style="flex:${p.slots}">${p.type === 'zeus' ? '⚡' : '$' + p.pay}</span>`);
+    for (const p of packages.cargo) {
+      const look = packageLook(p);
+      const style = p.type === 'curse' ? `;background:${look.color}` : '';
+      slots.push(`<span class="slot ${p.type}" style="flex:${p.slots}${style}">${look.icon || '$' + p.pay}</span>`);
+    }
     for (let i = 0; i < packages.slotsFree; i++) slots.push('<span class="slot empty" style="flex:1"></span>');
     this.setHtml(this.cargoEl, slots.join(''));
     this.blessingEl.classList.toggle('show', packages.blessed);
+    const fx = game.effects;
+    this.setHtml(
+      this.cursesEl,
+      fx.curses.map((id) => `<div class="hud-curse" style="background:${CURSES[id].color}">${CURSES[id].icon} ${CURSES[id].god} · ${CURSES[id].desc}</div>`).join(''),
+    );
+    this.updateDarkness(fx.visionRadius);
 
     const prompt = this.promptText();
     this.setHtml(this.promptEl, prompt);
@@ -195,6 +232,7 @@ export class Hud {
     this.hitTimer = Math.max(0, this.hitTimer - dt);
     this.vignetteEl.style.opacity = String(this.hitTimer * 1.6);
     this.root.classList.toggle('night', clock.phase !== PHASE.DAY);
+    document.body.classList.toggle('hades', Boolean(fx.visionRadius));
 
     this.updateArrows();
     this.minimap.update();

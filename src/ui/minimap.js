@@ -1,6 +1,7 @@
 // Minimap di pojok kanan bawah. Diputar 45° supaya arahnya sama dengan kamera isometric
 // (atas layar = barat laut), jadi kiri/kanan di minimap = kiri/kanan di layar.
 import { MINOTAUR_STATE } from '../sim/minotaurs.js';
+import { packageLook } from '../sim/curses.js';
 
 const SIZE = 200;
 const PAD = 8;
@@ -145,9 +146,13 @@ export class Minimap {
     ctx.drawImage(this.base, 0, 0, SIZE, SIZE);
 
     this.dot(world.plant.dropoff.x, world.plant.dropoff.z, COLORS.plant, 3.5);
-    for (const p of packages.waiting) this.dot(p.pickup.x, p.pickup.z, p.type === 'zeus' ? COLORS.zeus : COLORS.safe, p.type === 'zeus' ? 3.5 : 2.5);
-    for (const p of packages.cargo) this.dot(p.dest.x, p.dest.z, p.type === 'zeus' ? COLORS.zeus : COLORS.dest, 5, true);
-    for (const m of minotaurs.list) this.dot(m.x, m.z, COLORS.minotaur, m.state === MINOTAUR_STATE.WANDER ? 2.5 : 4);
+    // Hades: paket lain dan Minotaur tidak terlihat, hanya tujuan.
+    const blind = Boolean(game.effects.visionRadius);
+    if (!blind) {
+      for (const p of packages.waiting) this.dot(p.pickup.x, p.pickup.z, packageLook(p).color, p.type === 'safe' ? 2.5 : 3.5);
+      for (const m of minotaurs.list) this.dot(m.x, m.z, COLORS.minotaur, m.state === MINOTAUR_STATE.WANDER ? 2.5 : 4);
+    }
+    for (const p of packages.cargo) this.dot(p.dest.x, p.dest.z, p.type === 'safe' ? COLORS.dest : packageLook(p).color, 5, true);
 
     // Van: segitiga putih menghadap arah gerak.
     const c = this.toMap(car.x, car.z);

@@ -20,6 +20,11 @@ export function createDebugPanel(game, { visible }) {
     'Teleport: plant': () => teleport(game.world.plant.dropoff),
     'Teleport: Gubuk Gembala': () => teleport(game.world.ref.shepherdHut),
     'Teleport: Gubuk Penebang': () => teleport(game.world.ref.woodcutterHut),
+    'Curse: Dionysus 🍷': () => game.packages.debugGiveCurse(game.car, 'dionysus'),
+    'Curse: Chronos ⏳': () => game.packages.debugGiveCurse(game.car, 'chronos'),
+    'Curse: Hades 💀': () => game.packages.debugGiveCurse(game.car, 'hades'),
+    'Curse: Aphrodite 💘': () => game.packages.debugGiveCurse(game.car, 'aphrodite'),
+    'Curse: Ares ⚔️': () => game.packages.debugGiveCurse(game.car, 'ares'),
     'Akhiri hari sekarang': () => game.endDay(),
   };
   gui.add(state, 'info').name('Info').disable().listen();

@@ -23,9 +23,9 @@ export class Game {
     this.car = new Car(config.car);
     this.clock = new DayClock(config.time);
     this.damage = new DamageLedger(config.damage);
-    this.packages = new PackageSystem(this.world, config.packages, this.rng, this.bus);
+    this.packages = new PackageSystem(this.world, config.packages, this.rng, this.bus, config.curse);
     this.hazards = new HazardSystem(this.world, config.lightning, config.storm, this.rng, this.bus);
-    this.minotaurs = new MinotaurSystem(this.world, config.minotaur, this.rng, this.bus);
+    this.minotaurs = new MinotaurSystem(this.world, config.minotaur, this.rng, this.bus, config.curse.effects);
     this.run = new RunState(config.run);
     this.telemetry = new Telemetry(this.bus, () => ({
       run: this.run.runCount,
@@ -40,6 +40,9 @@ export class Game {
     this.earlyEndUntil = -Infinity;
     this.pendingHints = [];
     this.leftHQ = false;
+    this.steerHistory = [];
+    this.effects = this.packages.effects;
+    this.curseHintShown = false;
     this.car.reset(this.world.hq.spawn);
   }
 
@@ -75,7 +78,8 @@ export class Game {
     this.damage.reset();
     this.hazards.reset();
     this.minotaurs.reset();
-    this.packages.resetDay({ scripted: run.scripted, near: this.car });
+    this.packages.resetDay({ scripted: run.scripted, day: run.day, near: this.car });
+    this.steerHistory = [];
     this.collisionCooldown = 0;
     this.earlyEndUntil = -Infinity;
     this.pendingHints = [];
@@ -91,12 +95,26 @@ export class Game {
     }
   }
 
+  // Dionysus: setir tertunda + oleng pelan. Kontrol asli tidak diubah, van menerima versi "mabuk".
+  drunkControls(controls) {
+    const fx = this.effects;
+    if (!fx.steerDelay && !fx.wobble) return controls;
+    const now = this.runSeconds;
+    this.steerHistory.push({ t: now, steer: controls.steer });
+    while (this.steerHistory.length > 1 && this.steerHistory[1].t <= now - fx.steerDelay) this.steerHistory.shift();
+    const delayed = this.steerHistory[0].t <= now - fx.steerDelay ? this.steerHistory[0].steer : 0;
+    const hz = this.cfg.curse.effects.dionysus.wobbleHz;
+    const wobble = fx.wobble * Math.sin(now * hz * Math.PI * 2);
+    return { ...controls, steer: Math.max(-1, Math.min(1, delayed + wobble)) };
+  }
+
   step(dt, controls) {
     if (this.run.state !== RUN_STATE.DAY) return;
     this.runSeconds += dt;
     const hour = this.clock.hour;
 
-    const impacts = this.car.update(dt, controls, {
+    this.effects = this.packages.effects;
+    const impacts = this.car.update(dt, this.drunkControls(controls), {
       heightAt: this.world.heightAt,
       slopeAt: this.world.slopeAt,
       colliders: this.world.nearbyColliders,
@@ -118,7 +136,7 @@ export class Game {
 
     if (!this.inHQ) this.leftHQ = true;
 
-    const phase = this.clock.update(dt);
+    const phase = this.clock.update(dt * this.effects.clockMultiplier); // Chronos
     if (phase) this.bus.emit('phase', { phase });
 
     this.packages.update(dt, this.car, hour);
@@ -128,7 +146,7 @@ export class Game {
       phase: this.clock.phase,
       stormElapsed: this.clock.stormElapsed,
       inHQ: this.inHQ,
-      blessed: this.packages.blessed,
+      blessed: this.effects.lightningImmune,
     });
     for (const hit of hits) {
       if (hit.blocked) {
@@ -144,8 +162,18 @@ export class Game {
     }
 
     const mcfg = this.cfg.minotaur;
-    const rams = this.minotaurs.update(dt, { car: this.car, active: this.run.day >= mcfg.activeFromDay });
+    const rams = this.minotaurs.update(dt, {
+      car: this.car,
+      active: this.run.day >= mcfg.activeFromDay,
+      mode: this.effects.minotaurMode,
+    });
     for (const ram of rams) {
+      if (ram.nudge) {
+        // Sundulan sayang Aphrodite: mendorong pelan, tanpa damage.
+        const n = this.cfg.curse.effects.aphrodite.nudgeSpeed;
+        this.car.applyImpulse(ram.dirX * n, ram.dirZ * n, 0);
+        continue;
+      }
       const side = this.rng.chance(0.5) ? 1 : -1;
       this.car.applyImpulse(ram.dirX * mcfg.knockback, ram.dirZ * mcfg.knockback, side * mcfg.knockSpin);
       this.damage.add('minotaur', this.god ? 0 : this.cfg.damage.minotaur, hour);
@@ -173,6 +201,10 @@ export class Game {
     const hour = this.clock.hour;
     const result = this.packages.interact(this.car, hour);
     if (result) {
+      if (result.kind === 'pickup' && result.pkg.type === 'curse' && !this.curseHintShown) {
+        this.curseHintShown = true;
+        this.hint('Paket terkutuk! Efeknya ikut pergi begitu paket ini diantar.');
+      }
       if (result.kind === 'pickup' && result.pkg.type === 'zeus' && this.run.scripted) {
         this.hint('Selama membawa paket Zeus kamu kebal petir. Antar ke Electrical Plant di puncak gunung (ikuti panah ⚡).');
       }

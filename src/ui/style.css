@@ -97,6 +97,11 @@ kbd {
   animation: pulse 0.15s infinite alternate;
 }
 
+.mino-heart {
+  font-size: 22px;
+  animation: pulse 0.5s infinite alternate;
+}
+
 .minimap {
   position: absolute;
   right: 16px;
@@ -597,4 +602,65 @@ summary {
 
 .debug-gui {
   z-index: 20;
+}
+
+/* ---------- Curse ---------- */
+.hud-curse {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  animation: pulse 0.8s infinite alternate;
+}
+
+.hud-cargo .slot.curse {
+  color: #fff;
+  font-size: 18px;
+}
+
+.tag.curse {
+  color: #fff;
+}
+
+.tag.curse small {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tag small.curse-name {
+  font-weight: 700;
+}
+
+.hud-banner.curse .title {
+  color: #e9d5ff;
+}
+
+.hud-banner.lifted .title {
+  font-size: 30px;
+  font-style: italic;
+  color: #e9d5ff;
+}
+
+.hud-toast.curse {
+  color: #f9a8d4;
+}
+
+.hud-arrow.curse .tip {
+  color: #e9d5ff;
+}
+
+.hud-darkness {
+  position: absolute;
+  inset: 0;
+  z-index: -1; /* di bawah panel HUD, di atas dunia */
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+
+/* Hades: label paket lain tidak terlihat, kecuali tujuan yang sedang dibawa. */
+body.hades .labels .tag:not(.dest) {
+  visibility: hidden;
 }

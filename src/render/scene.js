@@ -118,6 +118,11 @@ export class View {
     // Kamera mengikuti van dengan sedikit look-ahead ke arah gerak.
     const desired = new THREE.Vector3(car.x + car.vx * 0.4, car.y ?? world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
     this.target.lerp(desired, 1 - Math.exp(-4 * dt));
+    // Dionysus: kamera ikut oleng pelan.
+    const sway = this.game.effects?.steerDelay ? this.game.cfg.curse.effects.dionysus.cameraSway : 0;
+    this.swayTime = (this.swayTime ?? 0) + dt;
+    this.target.x += Math.sin(this.swayTime * 1.3) * sway * dt * 2;
+    this.target.z += Math.cos(this.swayTime * 0.9) * sway * dt * 2;
     this.camera.position.copy(this.target).add(ISO_OFFSET);
     this.camera.lookAt(this.target);
     this.sun.position.copy(this.target).add(SUN_OFFSET);

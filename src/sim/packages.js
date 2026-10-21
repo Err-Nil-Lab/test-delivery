@@ -1,24 +1,31 @@
 // Paket: spawn acak di map (model Crazy Taxi), cargo dengan slot,
-// ambil/antar dengan berhenti + E, dan blessing Zeus yang ikut pergi saat paket diantar.
+// ambil/antar dengan berhenti + E. Paket dewa membawa efek yang ikut pergi saat paket diantar:
+// blessing Zeus (kebal petir) dan kategori Curse (Dionysus, Chronos, Hades, Aphrodite, Ares).
 import { distance } from './world.js';
+import { CURSES, CURSE_IDS, cargoEffects } from './curses.js';
+
+const round5 = (v) => Math.round(v / 5) * 5;
 
 export class PackageSystem {
-  constructor(world, cfg, rng, bus) {
+  constructor(world, cfg, rng, bus, curseCfg) {
     this.world = world;
     this.cfg = cfg;
+    this.curseCfg = curseCfg;
     this.rng = rng;
     this.bus = bus;
     this.nextId = 1;
     this.resetDay({ scripted: false, spawnInitial: false });
   }
 
-  resetDay({ scripted, spawnInitial = true, near = null }) {
+  resetDay({ scripted, day = 1, spawnInitial = true, near = null }) {
     this.waiting = [];
     this.cargo = [];
     this.delivered = [];
     this.spawnTimer = 0;
     this.nearTimer = 0;
     this.zeusSpawnedToday = 0;
+    this.cursesSpawnedToday = 0;
+    this.day = day;
     this.scripted = scripted;
     if (!spawnInitial) return;
     if (scripted) {
@@ -45,12 +52,18 @@ export class PackageSystem {
     return this.cargo.some((p) => p.type === 'zeus');
   }
 
+  // Efek gabungan dari paket dewa yang sedang dibawa.
+  get effects() {
+    return cargoEffects(this.cargo, this.curseCfg);
+  }
+
   get income() {
     return this.delivered.reduce((sum, p) => sum + p.pay, 0);
   }
 
   update(dt, car, hour) {
     for (const p of this.waiting) p.age += dt;
+    for (const p of this.cargo) p.held = (p.held ?? 0) + dt;
     const expired = this.waiting.filter((p) => p.age >= p.lifetime);
     if (expired.length) {
       this.waiting = this.waiting.filter((p) => p.age < p.lifetime);
@@ -97,9 +110,28 @@ export class PackageSystem {
     return !active && this.zeusSpawnedToday < this.cfg.zeus.maxPerDay;
   }
 
+  canSpawnCurse() {
+    const c = this.curseCfg;
+    if (!c || this.day < c.fromDay || this.cursesSpawnedToday >= c.maxPerDay) return false;
+    return this.waiting.filter((p) => p.type === 'curse').length < c.maxWaiting;
+  }
+
+  // Paket curse diambil di tempat bertema dewanya bila ada dan kosong, selain itu di titik acak.
+  spawnCurse(curse = this.rng.pick(CURSE_IDS)) {
+    const free = this.freePoints();
+    const themed = free.find((pt) => pt.name === CURSES[curse].pickupName);
+    const point = themed ?? this.rng.pick(free);
+    if (!point) return null;
+    return this.spawnAt('curse', point, curse);
+  }
+
   // Paket Zeus selalu diambil di Gerbang Istana Zeus; paket Safe di titik acak.
   spawnRandom({ allowZeus }) {
     if (allowZeus && this.canSpawnZeus() && this.rng.chance(this.cfg.zeus.chance)) return this.spawnAt('zeus', this.world.zeusPickup);
+    if (allowZeus && this.canSpawnCurse() && this.rng.chance(this.curseCfg.chance)) {
+      const pkg = this.spawnCurse();
+      if (pkg) return pkg;
+    }
     const candidates = this.freePoints();
     if (!candidates.length) return null;
     return this.spawnAt('safe', this.rng.pick(candidates));
@@ -114,36 +146,52 @@ export class PackageSystem {
     return this.spawnAt('safe', this.rng.pick(candidates));
   }
 
-  spawnAt(type, point) {
-    const pkg = this.makePackage(type, point);
+  spawnAt(type, point, curse = null) {
+    const pkg = this.makePackage(type, point, curse);
     if (!pkg) return null;
     if (type === 'zeus') this.zeusSpawnedToday += 1;
+    if (type === 'curse') this.cursesSpawnedToday += 1;
     this.waiting.push(pkg);
-    this.bus.emit('package_spawned', { id: pkg.id, packageType: type });
+    this.bus.emit('package_spawned', { id: pkg.id, packageType: type, curse });
     return pkg;
   }
 
-  makePackage(type, pickup) {
+  pickDestination(pickup, minTrip, preferredName) {
+    const used = new Set([...this.waiting, ...this.cargo].map((p) => p.dest.id));
+    const options = this.world.points.filter((pt) => pt.name !== pickup.name && !used.has(pt.id) && distance(pt, pickup) >= minTrip);
+    return options.find((pt) => pt.name === preferredName) ?? (options.length ? this.rng.pick(options) : null);
+  }
+
+  safePay(pickup, dest) {
+    const { basePay, payPerUnit, maxPay } = this.cfg.safe;
+    return Math.min(maxPay, basePay + payPerUnit * distance(pickup, dest));
+  }
+
+  makePackage(type, pickup, curse = null) {
     let dest;
     let pay;
+    let slots;
     if (type === 'zeus') {
       dest = this.world.plant.dropoff;
       pay = this.cfg.zeus.pay;
+      slots = this.cfg.zeus.slots;
+    } else if (type === 'curse') {
+      const c = this.curseCfg;
+      dest = this.pickDestination(pickup, c.minTripDistance, CURSES[curse].destName);
+      if (!dest) return null;
+      pay = round5(Math.min(c.maxPay, (this.cfg.safe.basePay + this.cfg.safe.payPerUnit * distance(pickup, dest)) * c.payMultiplier));
+      slots = c.slots;
     } else {
-      const used = new Set([...this.waiting, ...this.cargo].map((p) => p.dest.id));
-      const options = this.world.points.filter(
-        (pt) => pt.name !== pickup.name && !used.has(pt.id) && distance(pt, pickup) >= this.cfg.minTripDistance,
-      );
-      if (!options.length) return null;
-      dest = this.rng.pick(options);
-      const { basePay, payPerUnit, maxPay } = this.cfg.safe;
-      const raw = Math.min(maxPay, basePay + payPerUnit * distance(pickup, dest));
-      pay = Math.round(raw / 5) * 5;
+      dest = this.pickDestination(pickup, this.cfg.minTripDistance);
+      if (!dest) return null;
+      pay = round5(this.safePay(pickup, dest));
+      slots = this.cfg.safe.slots;
     }
     return {
       id: this.nextId++,
       type,
-      slots: this.cfg[type].slots,
+      curse,
+      slots,
       pay,
       pickup,
       dest,
@@ -190,8 +238,9 @@ export class PackageSystem {
       for (const pkg of action.packages) {
         this.cargo = this.cargo.filter((p) => p !== pkg);
         this.delivered.push(pkg);
-        this.bus.emit('deliver', { id: pkg.id, packageType: pkg.type, pay: pkg.pay, dest: pkg.dest.name, hour });
+        this.bus.emit('deliver', { id: pkg.id, packageType: pkg.type, curse: pkg.curse, pay: pkg.pay, dest: pkg.dest.name, hour });
         if (pkg.type === 'zeus') this.bus.emit('blessing_lost', { x: car.x, z: car.z, hour });
+        if (pkg.type === 'curse') this.bus.emit('curse_lifted', { curse: pkg.curse, heldSeconds: pkg.held, hour });
       }
       return action;
     }
@@ -201,10 +250,23 @@ export class PackageSystem {
     }
     const pkg = action.pkg;
     this.waiting = this.waiting.filter((p) => p !== pkg);
+    pkg.held = 0;
     this.cargo.push(pkg);
-    this.bus.emit('pickup', { id: pkg.id, packageType: pkg.type, pay: pkg.pay, dest: pkg.dest.name, hour });
+    this.bus.emit('pickup', { id: pkg.id, packageType: pkg.type, curse: pkg.curse, pay: pkg.pay, dest: pkg.dest.name, hour });
     if (pkg.type === 'zeus') this.bus.emit('blessing_gained', { hour });
+    if (pkg.type === 'curse') this.bus.emit('curse_gained', { curse: pkg.curse, hour });
     return action;
+  }
+
+  // Panel debug: langsung masukkan paket curse ke cargo bila slot cukup.
+  debugGiveCurse(car, curse) {
+    if (this.slotsFree < this.curseCfg.slots) return false;
+    const pkg = this.makePackage('curse', { id: 'debug', name: 'Debug', x: car.x, z: car.z }, curse);
+    if (!pkg) return false;
+    pkg.held = 0;
+    this.cargo.push(pkg);
+    this.bus.emit('curse_gained', { curse, debug: true });
+    return true;
   }
 
   // Panel debug: langsung masukkan paket Zeus ke cargo bila slot cukup.

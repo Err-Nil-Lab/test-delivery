@@ -3,8 +3,9 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { disposeObject } from './dispose.js';
+import { packageLook } from '../sim/curses.js';
 
-const COLORS = { safe: '#e9edf5', zeus: '#ffd84a', dest: '#4ade80', zeusDest: '#ffe066' };
+const COLORS = { dest: '#4ade80', zeusDest: '#ffe066' };
 
 function beam(color, height, radius) {
   const mesh = new THREE.Mesh(
@@ -50,10 +51,13 @@ export class MarkersView {
   createPickup(pkg) {
     const group = new THREE.Group();
     group.position.set(pkg.pickup.x, this.game.world.heightAt(pkg.pickup.x, pkg.pickup.z) + 0.3, pkg.pickup.z);
-    const color = COLORS[pkg.type];
-    group.add(beam(color, pkg.type === 'zeus' ? 18 : 10, pkg.type === 'zeus' ? 1.1 : 0.8));
+    const look = packageLook(pkg);
+    const color = look.color;
+    const special = pkg.type !== 'safe';
+    group.add(beam(color, special ? 18 : 10, special ? 1.1 : 0.8));
     group.add(ring(color, this.game.cfg.packages.pickupRadius));
-    const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), this.crateMats[pkg.type]);
+    const crateMat = this.crateMats[pkg.type] ?? new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 });
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), crateMat);
     crate.castShadow = true;
     crate.position.y = 1.2;
     group.add(crate);
@@ -67,10 +71,12 @@ export class MarkersView {
     arrowPivot.add(arrow);
     group.add(arrowPivot);
 
-    const icon = pkg.type === 'zeus' ? '⚡ ' : '';
+    const icon = look.icon ? `${look.icon} ` : '';
     const slots = pkg.slots > 1 ? ` · ${pkg.slots} slot` : '';
-    const label = tag(`<b>${icon}$${pkg.pay}</b><small>→ ${pkg.dest.name}${slots}</small>`, pkg.type);
-    label.position.y = pkg.type === 'zeus' ? 6 : 4.5;
+    const curse = pkg.type === 'curse' ? `<small class="curse-name">${look.name}</small>` : '';
+    const label = tag(`<b>${icon}$${pkg.pay}</b>${curse}<small>→ ${pkg.dest.name}${slots}</small>`, pkg.type);
+    if (pkg.type === 'curse') label.element.style.background = color;
+    label.position.y = special ? 6 : 4.5;
     group.add(label);
 
     this.scene.add(group);
@@ -80,7 +86,7 @@ export class MarkersView {
   createDest(pkg) {
     const group = new THREE.Group();
     group.position.set(pkg.dest.x, this.game.world.heightAt(pkg.dest.x, pkg.dest.z) + 0.3, pkg.dest.z);
-    const color = pkg.type === 'zeus' ? COLORS.zeusDest : COLORS.dest;
+    const color = pkg.type === 'zeus' ? COLORS.zeusDest : pkg.type === 'curse' ? packageLook(pkg).color : COLORS.dest;
     group.add(beam(color, 22, 1.3));
     group.add(ring(color, this.game.cfg.packages.dropoffRadius));
     const label = tag(`<b>Antar: ${pkg.dest.name}</b><small>$${pkg.pay}</small>`, `dest ${pkg.type}`);

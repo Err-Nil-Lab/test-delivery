@@ -26,6 +26,8 @@ const TRACKED = new Set([
   'package_expired',
   'blessing_gained',
   'blessing_lost',
+  'curse_gained',
+  'curse_lifted',
   'phase',
   'strike_hit',
   'minotaur_hit',

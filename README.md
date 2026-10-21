@@ -5,7 +5,7 @@ Prototype graybox untuk **core loop** Hermes Express (H.EX), dibuat dengan Three
 - **H1 (hook):** pemain bereaksi saat blessing Zeus hilang setelah paket diantar, lalu mulai memikirkan kapan dan di mana mengantar paket dewa.
 - **H2 (greed):** pemain tergoda mengambil "satu paket lagi" menjelang senja.
 
-Scope-nya: paket Safe + Zeus, petir, badai pemburu, dan Minotaur. Paket selundupan dan upgrade belum masuk.
+Scope-nya: paket Safe + Zeus + kategori **Curse** (5 dewa), petir, badai pemburu, dan Minotaur. Paket selundupan dan upgrade belum masuk.
 
 ## Map
 
@@ -66,6 +66,22 @@ URL bisa diberi parameter:
 | Laporan | Income − damage − 10% bayaran paket yang masih dibawa (− biaya derek) = profit. Profit ≥ quota → lanjut, kurang → ulang dari Day 1 |
 | Run | 7 hari. Day 1 di run pertama di-script sebagai tutorial: paket Zeus dijamin menunggu di Gerbang Istana, dan panah ⚡ menunjukkan arahnya |
 
+## Paket Curse
+
+Kategori sendiri: paket dewa yang membawa **efek buruk selama dibawa**, dan efeknya hilang begitu paket diantar (*"The curse belonged to the package too."*). Bayarannya ±2× paket Safe, makan 1 slot, dan tujuannya selalu jauh. Muncul mulai Day 2 (`curse.fromDay`), paling banyak 1 menunggu di map dan 2 per hari.
+
+| Dewa | Efek selama dibawa | Pickup → tujuan (bila tersedia) |
+|---|---|---|
+| 🍷 **Dionysus** · Mabuk | Setir tertunda 0,25 detik, van oleng sendiri, kamera bergoyang pelan | Kafe Dionysus → Aula Istana Zeus (pesta) |
+| ⏳ **Chronos** · Waktu ngebut | Jam in-game berjalan 2×, jadi senja dan badai datang lebih cepat | acak |
+| 💀 **Hades** · Gelap | Pandangan menyempit ke lingkaran di sekitar van. Paket lain dan Minotaur hilang dari layar dan minimap; hanya tujuan yang ditunjuk | acak → Dermaga Poseidon |
+| 💘 **Aphrodite** · Terpikat | Minotaur tidak menyeruduk, tapi jatuh cinta dan membuntuti van, bahkan keluar padang. Kalau van berhenti di dekatnya, Minotaur menyundul pelan tanpa damage | Butik Aphrodite → Gubuk Penebang |
+| ⚔️ **Ares** · Provokasi | Minotaur melihat 2× lebih jauh, ancang-ancang ½ lebih singkat, menyeruduk 1,5× lebih jauh, dan mengejar sampai keluar padang | Gym Ares → Ladang Minotaur |
+
+Efek bisa bertumpuk (misalnya Chronos + Hades). Kalau membawa Aphrodite dan Ares sekaligus, yang berlaku untuk Minotaur adalah curse yang diambil terakhir. Semua angka ada di `curse.effects` di `src/config.js`. Panel debug punya tombol untuk langsung memberi tiap curse.
+
+Catatan: goyangan kamera Dionysus kecil (`cameraSway`), tapi belum ada opsi untuk mematikannya.
+
 ## Tuning
 
 Semua angka ada di [`src/config.js`](src/config.js). Nilai bertanda `TODO(GDD)` adalah **placeholder untuk graybox karena GDD belum menentukannya**:
@@ -83,7 +99,7 @@ Karena map ini lebih besar, satu hari dibuat 2 menit sampai senja dan kecepatan 
 
 Panel debug (<kbd>`</kbd>) berisi time scale, lompat ke 17:30/18:00/20:00/23:45, beri paket Zeus, teleport (HQ, Gerbang Istana, Padang Minotaur, kaki gunung, plant), god mode, dan akhiri hari.
 
-Selama bermain, game mencatat event playtest: pickup, deliver, blessing didapat/hilang, sambaran yang kena, serudukan Minotaur, pendaratan keras, tabrakan, pergantian fase, jam pulang, dan ringkasan laporan. Setiap event membawa hari dan jam in-game. Log bisa diunduh sebagai JSON dari layar pause atau layar menang. Data ini membantu menjawab H2, misalnya apakah pemain masih mengambil paket setelah 17:00 dan jam berapa mereka pulang.
+Selama bermain, game mencatat event playtest: pickup, deliver, blessing didapat/hilang, sambaran yang kena, serudukan Minotaur, pendaratan keras, curse didapat/terangkat (beserta lama dibawa), tabrakan, pergantian fase, jam pulang, dan ringkasan laporan. Setiap event membawa hari dan jam in-game. Log bisa diunduh sebagai JSON dari layar pause atau layar menang. Data ini membantu menjawab H2, misalnya apakah pemain masih mengambil paket setelah 17:00 dan jam berapa mereka pulang.
 
 ### Membagikan untuk playtest online
 
@@ -105,7 +121,8 @@ src/
     geometry.js    helper polyline/polygon
     collision.js   collider kotak berotasi, dinding kapsul, lingkaran + grid spasial
     car.js         driving arcade, tanjakan, collision, impuls
-    minotaurs.js   AI Minotaur: berkeliaran → ancang-ancang → menyeruduk → pusing
+    minotaurs.js   AI Minotaur: berkeliaran → ancang-ancang → menyeruduk → pusing (+ mode Ares/Aphrodite)
+    curses.js      definisi 5 curse dan gabungan efek dari cargo
     clock.js       jam dan fase hari
     packages.js    spawn, cargo/slot, ambil/antar, blessing
     hazards.js     petir zona dan badai pemburu

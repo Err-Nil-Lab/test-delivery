@@ -72,6 +72,25 @@ export const CONFIG = {
     zeus: { slots: 2, pay: 400, chance: 0.3, maxPerDay: 1 },
   },
 
+  // Kategori Curse: paket dewa dengan efek buruk selama dibawa, hilang saat diantar.
+  curse: {
+    fromDay: 2, // TODO(GDD): hari curse pertama muncul
+    chance: 0.3, // peluang spawn acak menjadi paket curse
+    maxWaiting: 1, // paling banyak 1 paket curse menunggu di map
+    maxPerDay: 2,
+    slots: 1,
+    payMultiplier: 2, // bayaran = rumus paket Safe × ini
+    maxPay: 380,
+    minTripDistance: 60, // perjalanan panjang supaya efeknya terasa
+    effects: {
+      dionysus: { steerDelay: 0.25, wobble: 0.35, wobbleHz: 0.7, cameraSway: 0.6 },
+      chronos: { clockMultiplier: 2 },
+      hades: { visionRadius: 16 }, // unit dunia yang masih terlihat di sekitar van
+      aphrodite: { followSpeed: 8, followRadius: 40, leash: 90, nudgeSpeed: 6, nudgeInterval: 1.5 },
+      ares: { detectMultiplier: 2, windupMultiplier: 0.5, chargeMultiplier: 1.5, chaseMargin: 20 },
+    },
+  },
+
   lightning: {
     telegraph: 1.0, // detik dari tanda di tanah sampai petir menyambar
     radius: 3.5,

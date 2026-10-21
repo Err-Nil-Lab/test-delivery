@@ -88,6 +88,14 @@ export class MinotaurView {
     stars.visible = false;
     root.add(stars);
 
+    const heartEl = document.createElement('div');
+    heartEl.className = 'mino-heart';
+    heartEl.textContent = '💘';
+    const heart = new CSS2DObject(heartEl);
+    heart.position.y = 4.4;
+    heart.visible = false;
+    root.add(heart);
+
     const el = document.createElement('div');
     el.className = 'mino-alert';
     el.textContent = '!';
@@ -97,7 +105,7 @@ export class MinotaurView {
     root.add(alert);
 
     this.scene.add(root);
-    return { root, body, arrowPivot, lane, head, stars, alert, eyeMat };
+    return { root, body, arrowPivot, lane, head, stars, alert, heart, eyeMat };
   }
 
   update(dt) {
@@ -112,7 +120,10 @@ export class MinotaurView {
 
       const windup = m.state === MINOTAUR_STATE.WINDUP;
       const charging = m.state === MINOTAUR_STATE.CHARGE;
-      v.eyeMat.emissiveIntensity = windup ? 2 : 0;
+      // Ares: mata selalu merah. Aphrodite: hati di atas kepala saat membuntuti.
+      const enraged = minotaurs.mode === 'enraged';
+      v.eyeMat.emissiveIntensity = windup || enraged ? 2 : 0;
+      v.heart.visible = m.state === MINOTAUR_STATE.FOLLOW;
       // Ancang-ancang: badan bergetar, mata menyala, panah jalur muncul.
       v.body.position.x = windup ? Math.sin(this.time * 60) * 0.12 : 0;
       v.body.rotation.x = windup ? 0.2 : charging ? 0.25 : 0;
