@@ -59,8 +59,9 @@ describe('Paket dan cargo', () => {
   it('menolak paket bila slot tidak cukup', () => {
     const game = newGame();
     const zeus = game.packages.waiting.find((p) => p.type === 'zeus');
-    // Isi 2 slot dengan paket Safe, sisakan 1 slot: Zeus (2 slot) harus ditolak.
-    const safes = game.packages.waiting.filter((p) => p.type === 'safe').slice(0, 2);
+    // Isi 2 slot dengan paket 1-slot, sisakan 1 slot: Zeus (2 slot) harus ditolak.
+    const safes = game.packages.waiting.filter((p) => p.type !== 'zeus' && p.slots === 1).slice(0, 2);
+    expect(safes).toHaveLength(2);
     game.packages.waiting = game.packages.waiting.filter((p) => !safes.includes(p));
     game.packages.cargo.push(...safes);
     teleport(game, zeus.pickup);
@@ -114,5 +115,11 @@ describe('Paket dan cargo', () => {
     stepFor(game, game.cfg.packages.waitingLifetime + 0.5, IDLE);
     expect(game.packages.waiting).not.toContain(safe);
     expect(game.packages.waiting.some((p) => p.type === 'zeus')).toBe(true);
+  });
+
+  it('sejak Day 1 semua jenis paket langsung ada di map', () => {
+    const game = newGame();
+    const types = new Set(game.packages.waiting.map((p) => p.type));
+    expect([...types].sort()).toEqual(['curse', 'safe', 'smuggle', 'zeus']);
   });
 });

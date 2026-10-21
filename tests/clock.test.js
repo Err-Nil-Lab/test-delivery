@@ -23,10 +23,10 @@ describe('DayClock', () => {
     ]);
   });
 
-  it('satu hari sampai senja ±2 menit nyata', () => {
+  it('satu hari cepat: senja di detik 84, badai di detik 98', () => {
     const { duskHour, stormHour, startHour, realSecondsPerHour } = CONFIG.time;
-    expect((duskHour - startHour) * realSecondsPerHour).toBe(120);
-    expect((stormHour - startHour) * realSecondsPerHour).toBe(140);
+    expect((duskHour - startHour) * realSecondsPerHour).toBe(84);
+    expect((stormHour - startHour) * realSecondsPerHour).toBe(98);
   });
 
   it('stormElapsed hanya berjalan setelah 20:00', () => {

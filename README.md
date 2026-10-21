@@ -56,7 +56,7 @@ URL bisa diberi parameter:
 
 | Sistem | Perilaku |
 |---|---|
-| Hari | 06:00 → 18:00 (senja, "Pulang ke HQ!") → 20:00 (badai memburu). 2 menit nyata sampai senja |
+| Hari | 06:00 → 18:00 (senja, "Pulang ke HQ!") → 20:00 (badai memburu). 84 detik nyata sampai senja, badai di detik 98 |
 | HQ | Tempat spawn pagi dan akhir hari. Pulang sebelum 18:00 butuh E dua kali |
 | Paket Safe | 1 slot. Bayaran naik sesuai jarak. Muncul acak di pinggir jalan; selalu ada minimal 1 di dekat van, maksimal 6 aktif |
 | Paket Zeus | 2 slot, $400. Diambil di Gerbang Istana Zeus, diantar ke **Electrical Plant** di puncak gunung. Selama dibawa, van kebal petir dan bercahaya. Saat diantar, blessing langsung hilang dan van harus turun gunung tanpa perlindungan |
@@ -87,7 +87,7 @@ Suara belum didengarkan oleh manusia: resep dan volumenya hasil tebakan awal, ja
 
 ## Paket Selundupan (Chance)
 
-Peti hitam bersinar merah yang muncul acak di titik paket biasa, mulai Day 3 (`smuggle.fromDay`, sesuai GDD), paling banyak 2 menunggu di map. Labelnya menulis **persentase scam** (5–40%), dan bayarannya naik sebanding: rumus Safe × (1,3 + 4 × peluang scam), jadi 5% ≈ ×1,5 dan 40% ≈ ×2,9.
+Peti hitam bersinar merah yang muncul acak di titik paket biasa sejak Day 1 (`smuggle.fromDay`), paling banyak 2 menunggu di map. Labelnya menulis **persentase scam** (5–40%), dan bayarannya naik sebanding: rumus Safe × (1,3 + 4 × peluang scam), jadi 5% ≈ ×1,5 dan 40% ≈ ×2,9.
 
 Hasilnya diundi saat diantar:
 - **Legit:** bayaran masuk, banner "💰 Legit!".
@@ -97,7 +97,7 @@ Selundupan bisa dibawa bersama curse maupun Zeus. Panel debug punya tombol untuk
 
 ## Paket Curse
 
-Kategori sendiri: paket dewa yang membawa **efek buruk selama dibawa**, dan efeknya hilang begitu paket diantar (*"The curse belonged to the package too."*). Bayarannya ±2× paket Safe, makan 1 slot, dan tujuannya selalu jauh. Muncul mulai Day 2 (`curse.fromDay`), paling banyak 1 menunggu di map dan 2 per hari.
+Kategori sendiri: paket dewa yang membawa **efek buruk selama dibawa**, dan efeknya hilang begitu paket diantar (*"The curse belonged to the package too."*). Bayarannya ±2× paket Safe, makan 1 slot, dan tujuannya selalu jauh. Muncul sejak Day 1 (`curse.fromDay`), paling banyak 1 menunggu di map dan 2 per hari.
 
 | Dewa | Efek selama dibawa | Pickup → tujuan (bila tersedia) |
 |---|---|---|
@@ -122,7 +122,8 @@ Semua angka ada di [`src/config.js`](src/config.js). Nilai bertanda `TODO(GDD)` 
 - **Medan:** tinggi undakan 2,5 (`TERRAIN` di `src/sim/world.js`), batas panjat `car.maxClimbSlope` 0,35. Jalan gunung paling curam 0,18, jadi selalu bisa dinaiki.
 - **Minotaur aktif mulai Day 1** (`minotaur.activeFromDay`). Ubah ke 2 kalau ingin tutorial Day 1 tanpa Minotaur.
 
-Karena map ini lebih besar, satu hari dibuat 2 menit sampai senja dan kecepatan van dinaikkan ke 22. Dari panjang jalannya, satu perjalanan Zeus pulang-pergi (Base → istana → puncak → Base) diperkirakan makan sekitar setengah hari, jadi mengambil paket Zeus adalah keputusan besar. Angka ini belum diuji dengan pemain.
+Satu hari dibuat 84 detik sampai senja (`time.realSecondsPerHour` = 7) dan kecepatan van 22. Dari panjang jalannya, satu perjalanan Zeus pulang-pergi (Base → istana → puncak → Base) diperkirakan makan lebih dari separuh hari, jadi mengambil paket Zeus adalah keputusan besar. Angka ini belum diuji dengan pemain.
+- **Semua jenis paket (Safe, Zeus, Curse, Selundupan) muncul sejak Day 1.** Di awal tiap hari dijamin ada minimal 1 paket curse dan 1 selundupan di map (`packages.guaranteeSpecialAtStart`).
 
 ## Debug dan playtest
 

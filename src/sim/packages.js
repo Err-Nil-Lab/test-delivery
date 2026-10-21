@@ -37,6 +37,14 @@ export class PackageSystem {
       this.zeusSpawnedToday += 1;
     }
     if (near) this.spawnNear(near);
+    // Semua jenis paket langsung terlihat sejak awal hari.
+    if (this.cfg.guaranteeSpecialAtStart) {
+      if (this.canSpawnCurse()) this.spawnCurse();
+      if (this.canSpawnSmuggle()) {
+        const free = this.freePoints();
+        if (free.length) this.spawnAt('smuggle', this.rng.pick(free));
+      }
+    }
     while (this.waiting.length < this.cfg.initialWaiting) {
       if (!this.spawnRandom({ allowZeus: !scripted })) break;
     }
