@@ -167,4 +167,33 @@ describe('Map Olympus', () => {
       }
     }
   });
+
+  it('hirarki jalan: jalan utama paling cepat, jalan kecil lebih pelan, luar jalan paling pelan', () => {
+    const at = (kind) => {
+      const r = world.roads.find((x) => x.kind === kind);
+      const p = r.points[Math.floor(r.points.length / 2)];
+      return world.speedAt(p.x, p.z);
+    };
+    expect(at('main')).toBeGreaterThan(at('street'));
+    expect(at('street')).toBeGreaterThan(at('path'));
+    const widths = Object.fromEntries(world.roads.map((r) => [r.kind, r.width]));
+    expect(widths.main).toBeGreaterThan(widths.street);
+    expect(widths.street).toBeGreaterThan(widths.path);
+    // Rumput jauh dari jalan & kota.
+    const grass = world.vegetation.find((v) => v.kind === 'olive' && world.heightAt(v.x, v.z) === 0);
+    expect(world.speedAt(grass.x, grass.z)).toBeLessThan(at('street'));
+  });
+
+  it('vegetasi: banyak pohon, tidak di jalan, tidak menutupi titik paket', () => {
+    const trees = world.vegetation.filter((v) => ['olive', 'cypress', 'pine', 'palm'].includes(v.kind));
+    expect(trees.length).toBeGreaterThan(200);
+    for (const v of world.vegetation) {
+      for (const r of world.roads) expect(nearestOnPolyline(r.points, r.closed, v.x, v.z).dist).toBeGreaterThan(r.width / 2);
+      for (const p of world.points) expect(Math.hypot(p.x - v.x, p.z - v.z)).toBeGreaterThan(6);
+    }
+  });
+
+  it('pohon hanya bisa ditabrak di tanah datar', () => {
+    for (const v of world.vegetation.filter((t) => t.collide)) expect(world.heightAt(v.x, v.z)).toBe(0);
+  });
 });

@@ -117,6 +117,7 @@ export class Game {
     const impacts = this.car.update(dt, this.drunkControls(controls), {
       heightAt: this.world.heightAt,
       slopeAt: this.world.slopeAt,
+      speedAt: this.world.speedAt,
       colliders: this.world.nearbyColliders,
       dynamic: this.minotaurs.colliders(),
     });

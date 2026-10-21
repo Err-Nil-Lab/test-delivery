@@ -13,7 +13,7 @@ import { EventFx } from './fx.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
-const VIEW_HEIGHT = 64; // unit dunia yang terlihat secara vertikal
+const VIEW_HEIGHT = 72; // unit dunia yang terlihat secara vertikal
 
 // Keyframe cahaya per jam in-game.
 const LIGHT_KEYS = [

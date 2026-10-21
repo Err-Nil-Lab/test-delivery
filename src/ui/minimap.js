@@ -10,8 +10,13 @@ const COLORS = {
   hill: '#8f8a5f',
   zone: 'rgba(255, 216, 74, 0.25)',
   grass: '#7f9a6c',
-  road: '#d7d2c4',
-  ring: '#aeb6d6',
+  ground: '#87a172',
+  beach: '#d9c79a',
+  paved: '#a3a29c',
+  field: '#b59a5e',
+  main: '#fff1c2',
+  street: '#d7d2c4',
+  path: '#c2a878',
   hq: '#5b8fe0',
   plant: '#ffd84a',
   safe: '#f6f3ec',
@@ -87,14 +92,27 @@ export class Minimap {
       ],
       true,
     );
-    ctx.fillStyle = '#6f6c66';
+    ctx.fillStyle = COLORS.ground;
     ctx.fill();
+    for (const e of world.paved) {
+      ctx.beginPath();
+      const steps = 32;
+      for (let i = 0; i <= steps; i++) {
+        const a = (i / steps) * Math.PI * 2;
+        const m = this.toMap(e.cx + Math.cos(a) * e.rx, e.cz + Math.sin(a) * e.rz);
+        if (i === 0) ctx.moveTo(m.x, m.y);
+        else ctx.lineTo(m.x, m.y);
+      }
+      ctx.fillStyle = COLORS.paved;
+      ctx.fill();
+    }
     for (const [poly, color] of [
       [world.regions.sea, COLORS.sea],
+      [world.regions.beach, COLORS.beach],
       [world.regions.hill, COLORS.hill],
       [world.regions.zeusZone, COLORS.zone],
       [world.regions.meadow, COLORS.grass],
-      [world.regions.grassSouth, COLORS.grass],
+      ...world.fields.map((f) => [f, COLORS.field]),
     ]) {
       this.path(ctx, poly, true);
       ctx.fillStyle = color;
@@ -102,10 +120,14 @@ export class Minimap {
     }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    for (const road of world.roads) {
+    // Hirarki jalan: jalan kecil digambar dulu, jalan utama paling atas dan paling tebal.
+    const rank = { path: 0, street: 1, ramp: 1, mountain: 2, ring: 3, main: 3 };
+    const roads = [...world.roads].sort((a, b) => (rank[a.kind] ?? 1) - (rank[b.kind] ?? 1));
+    for (const road of roads) {
+      const major = rank[road.kind] >= 2;
       this.path(ctx, road.points, road.closed);
-      ctx.strokeStyle = road.kind === 'ring' ? COLORS.ring : COLORS.road;
-      ctx.lineWidth = Math.max(1.2, road.width * this.scale * 0.8);
+      ctx.strokeStyle = major ? COLORS.main : road.kind === 'path' ? COLORS.path : COLORS.street;
+      ctx.lineWidth = Math.max(major ? 2.4 : 1, road.width * this.scale * (major ? 1.1 : 0.7));
       ctx.stroke();
     }
     const z = world.hq.zone;

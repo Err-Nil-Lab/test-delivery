@@ -25,6 +25,18 @@ Jalan diagonal dari istana menyusuri kaki gunung ke kota. Di tengahnya ada perca
 
 Minimap di kanan bawah diputar 45° supaya arahnya sama dengan kamera isometric.
 
+**Skala dan hirarki jalan.** Map 1,4× lebih besar dari versi pertama (`SCALE` di `src/sim/world.js`; `K` ikut menskalakan gedung dan gunung). Jalan dibagi beberapa kelas, dan tiap kelas punya lebar, tampilan, dan batas kecepatan sendiri (`ROAD_WIDTH` / `ROAD_SPEED`). Kecepatan maksimal van dikali faktor permukaan di bawahnya:
+
+| Kelas | Tampilan | Lebar | Kecepatan |
+|---|---|---|---|
+| Jalan utama (`main`) & ring road | aspal gelap, garis kuning ganda / putih putus-putus, garis tepi, trotoar, lampu jalan | 14 | ×1,15 |
+| Jalan gunung (`mountain`) | aspal, garis kuning putus-putus | 11 | ×1 |
+| Jalan kota/perumahan (`street`) | abu-abu terang, tanpa marka | 8 | ×0,95 |
+| Jalan tanah (`path`) | tanah | 5 | ×0,9 |
+| Di luar jalan (rumput, padang, lereng) | | | ×0,75 (`OFFROAD_SPEED`) |
+
+**Vegetasi dan isi map** ([`src/sim/vegetation.js`](src/sim/vegetation.js)): hutan kecil zaitun dan cemara yang berkelompok, pinus di lereng atas, palem di pantai, serta semak dan batu sebagai pengisi. Sebarannya deterministik, jadi map selalu sama. Pohon di tanah datar punya batang yang bisa ditabrak. Pohon di lereng hanya hiasan, supaya tidak membentuk kantong yang menjebak van. Di Padang Minotaur pohonnya jarang supaya tetap ada ruang menghindar. Area yang sebelumnya kosong sekarang terisi: rumput, pantai di sepanjang laut, ladang dengan barisan tanaman di selatan, dan pelataran kota/perumahan.
+
 ## Menjalankan
 
 Butuh Node.js 20.19+ atau 22.12+.
@@ -122,7 +134,7 @@ Semua angka ada di [`src/config.js`](src/config.js). Nilai bertanda `TODO(GDD)` 
 - **Medan:** tinggi undakan 2,5 (`TERRAIN` di `src/sim/world.js`), batas panjat `car.maxClimbSlope` 0,35. Jalan gunung paling curam 0,18, jadi selalu bisa dinaiki.
 - **Minotaur aktif mulai Day 1** (`minotaur.activeFromDay`). Ubah ke 2 kalau ingin tutorial Day 1 tanpa Minotaur.
 
-Satu hari dibuat 84 detik sampai senja (`time.realSecondsPerHour` = 7) dan kecepatan van 22. Dari panjang jalannya, satu perjalanan Zeus pulang-pergi (Base → istana → puncak → Base) diperkirakan makan lebih dari separuh hari, jadi mengambil paket Zeus adalah keputusan besar. Angka ini belum diuji dengan pemain.
+Satu hari dibuat 84 detik sampai senja (`time.realSecondsPerHour` = 7) dan kecepatan van 22 (25 di jalan utama). Sejak map diperbesar 1,4×, satu perjalanan Zeus pulang-pergi (Base → istana → puncak → Base) bisa memakan sebagian besar hari, jadi mengambil paket Zeus adalah keputusan besar. Kalau terasa terlalu panjang, angka yang bisa diputar: `time.realSecondsPerHour`, `ROAD_SPEED`, `SCALE`, atau bayaran Zeus. Angka ini belum diuji dengan pemain.
 - **Semua jenis paket (Safe, Zeus, Curse, Selundupan) muncul sejak Day 1.** Di awal tiap hari dijamin ada minimal 1 paket curse dan 1 selundupan di map (`packages.guaranteeSpecialAtStart`).
 
 ## Debug dan playtest
@@ -147,7 +159,8 @@ src/
   main.js          game loop fixed-step 60 Hz, menyambungkan semuanya
   sim/             logika game murni (tanpa three.js), bisa dites headless
     game.js        orkestrator: step, interaksi E, akhir hari
-    world.js       map dari sketsa: wilayah, jalan, gedung, elevasi gunung, titik paket, collider
+    world.js       map dari sketsa: wilayah, jalan (hirarki + kecepatan), gedung, elevasi gunung, titik paket, collider
+    vegetation.js  sebaran pohon, semak, batu (deterministik, berkelompok)
     geometry.js    helper polyline/polygon
     collision.js   collider kotak berotasi, dinding kapsul, lingkaran + grid spasial
     car.js         driving arcade, tanjakan, collision, impuls
