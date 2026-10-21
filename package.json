@@ -1,0 +1,23 @@
+{
+  "name": "hermes-express-graybox",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Graybox prototype core loop Hermes Express (Three.js)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "vite": "7.3.7",
+    "vitest": "4.1.11"
+  }
+}
