@@ -7,6 +7,7 @@ import { View } from './render/scene.js';
 import { Hud } from './ui/hud.js';
 import { Screens, downloadJSON } from './ui/screens.js';
 import { createDebugPanel } from './ui/debug.js';
+import { AudioEngine } from './audio/audio.js';
 
 const STEP = 1 / 60;
 const params = new URLSearchParams(window.location.search);
@@ -15,10 +16,18 @@ const seed = Number(params.get('seed')) || Math.floor(Math.random() * 1e9);
 const app = document.getElementById('app');
 const game = new Game({ seed });
 const input = new Input(window);
-const view = new View(app, game);
+const view = new View(app, game, { calm: params.has('calm') });
+const audio = new AudioEngine(game, game.cfg.audio);
+// Browser baru mengizinkan suara setelah interaksi pertama pemain.
+const unlockAudio = () => audio.unlock();
+window.addEventListener('keydown', unlockAudio);
+window.addEventListener('pointerdown', unlockAudio);
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.card button')) audio.play('uiClick');
+});
 const hud = new Hud(app, game, view);
 const screens = new Screens(app);
-createDebugPanel(game, { visible: params.has('debug') });
+createDebugPanel(game, { visible: params.has('debug'), audio });
 
 let paused = false;
 
@@ -70,6 +79,7 @@ game.bus.on('day_end', () => {
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') togglePause();
+  if (e.code === 'KeyM') hud.toast(audio.toggleMute() ? '🔇 Suara mati (M)' : '🔊 Suara nyala (M)', '', 1.5);
 });
 
 let last = performance.now();
@@ -78,7 +88,7 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
   if (game.run.state === RUN_STATE.DAY && !paused) {
-    acc += dt * game.timeScale;
+    acc += view.juice.simDelta(dt) * game.timeScale; // hitstop: simulasi berhenti sesaat
     while (acc >= STEP && game.run.state === RUN_STATE.DAY) {
       game.step(STEP, input.controls());
       acc -= STEP;
@@ -89,6 +99,7 @@ function frame(now) {
   }
   view.update(dt);
   hud.update(dt);
+  audio.update(dt, { paused });
   view.render();
   requestAnimationFrame(frame);
 }
@@ -101,6 +112,7 @@ requestAnimationFrame(frame);
 window.__hex = {
   game,
   view,
+  audio,
   state: () => ({
     run: game.run.state,
     day: game.run.day,

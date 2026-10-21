@@ -20,11 +20,11 @@ function chargeLength(m, max) {
 }
 
 export class MinotaurView {
-  constructor(scene, game) {
+  constructor(scene, game, pool) {
     this.scene = scene;
     this.game = game;
     this.views = new Map();
-    this.dust = [];
+    this.pool = pool;
     this.time = 0;
     this.mats = {
       fur: new THREE.MeshStandardMaterial({ color: '#6b4a3a', roughness: 0.9 }),
@@ -32,9 +32,7 @@ export class MinotaurView {
       horn: new THREE.MeshStandardMaterial({ color: '#efe6d0' }),
       eye: new THREE.MeshStandardMaterial({ color: '#2a0000', emissive: '#ff2a1a', emissiveIntensity: 0 }),
       star: new THREE.MeshBasicMaterial({ color: '#ffe066' }),
-      dust: new THREE.MeshBasicMaterial({ color: '#c9b79a', transparent: true, opacity: 0.7, depthWrite: false }),
     };
-    this.dustGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
   }
 
   create() {
@@ -141,23 +139,9 @@ export class MinotaurView {
       v.stars.rotation.y += dt * 4;
 
       if (charging && Math.random() < dt * 30) {
-        const mesh = new THREE.Mesh(this.dustGeo, this.mats.dust.clone());
-        mesh.position.set(m.x + (Math.random() - 0.5), 0.4, m.z + (Math.random() - 0.5));
-        this.scene.add(mesh);
-        this.dust.push({ mesh, life: 0.6 });
+        const ground = this.game.world.heightAt(m.x, m.z);
+        this.pool?.emit({ x: m.x + (Math.random() - 0.5), y: ground + 0.4, z: m.z + (Math.random() - 0.5), vx: 0, vy: 1.5, vz: 0, life: 0.6, size: 0.8, grow: 2, color: '#c9b79a', drag: 2 });
       }
     }
-
-    for (const d of this.dust) {
-      d.life -= dt;
-      d.mesh.position.y += dt * 1.5;
-      d.mesh.scale.setScalar(1 + (0.6 - d.life) * 2);
-      d.mesh.material.opacity = Math.max(0, d.life / 0.6) * 0.7;
-    }
-    for (const d of this.dust.filter((q) => q.life <= 0)) {
-      this.scene.remove(d.mesh);
-      d.mesh.material.dispose();
-    }
-    this.dust = this.dust.filter((d) => d.life > 0);
   }
 }

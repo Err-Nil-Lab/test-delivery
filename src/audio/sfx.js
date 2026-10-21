@@ -1,0 +1,118 @@
+// Resep SFX sintesis + pemetaan event bus → SFX.
+// Setiap resep: (ctx, out, opts) => void. Tidak ada file aset.
+import { tone, noise, arpeggio, midi } from './synth.js';
+
+export const SFX = {
+  // ---------- Paket ----------
+  pickup: (c, o) => {
+    tone(c, o, { freq: 380, freqEnd: 760, type: 'triangle', dur: 0.12, gain: 0.25 });
+    noise(c, o, { dur: 0.08, gain: 0.12, filter: 'lowpass', freq: 600, delay: 0.02 }); // kardus
+  },
+  deliver: (c, o) => arpeggio(c, o, [midi(76), midi(81), midi(88)], { type: 'square', dur: 0.12, gain: 0.12, step: 0.06 }),
+  cargoFull: (c, o) => tone(c, o, { freq: 140, type: 'square', dur: 0.18, gain: 0.15 }),
+  expired: (c, o) => noise(c, o, { dur: 0.25, gain: 0.12, filter: 'highpass', freq: 2000, freqEnd: 600 }),
+
+  // ---------- Benturan ----------
+  bump: (c, o, { strength = 0.5 } = {}) => {
+    noise(c, o, { dur: 0.15 + strength * 0.2, gain: 0.25 + strength * 0.35, filter: 'lowpass', freq: 500, freqEnd: 120 });
+    tone(c, o, { freq: 110, freqEnd: 50, type: 'sine', dur: 0.18, gain: 0.3 * strength });
+    if (strength > 0.6) noise(c, o, { dur: 0.25, gain: 0.12, filter: 'highpass', freq: 3500, delay: 0.02 }); // kaca/logam
+  },
+  takeoff: (c, o) => noise(c, o, { dur: 0.35, gain: 0.1, filter: 'bandpass', freq: 400, freqEnd: 1600, q: 2 }),
+  landing: (c, o, { strength = 0.5 } = {}) => {
+    tone(c, o, { freq: 90, freqEnd: 40, dur: 0.25, gain: 0.4 * strength + 0.1 });
+    noise(c, o, { dur: 0.3, gain: 0.3 * strength, filter: 'lowpass', freq: 900, freqEnd: 200, delay: 0.01 });
+  },
+
+  // ---------- Petir ----------
+  thunder: (c, o, { near = 1 } = {}) => {
+    noise(c, o, { dur: 0.08, gain: 0.45 * near, filter: 'highpass', freq: 2500 }); // crack
+    noise(c, o, { dur: 1.2, attack: 0.03, gain: 0.35 * near + 0.05, filter: 'lowpass', freq: 400, freqEnd: 60, delay: 0.03 }); // rumble
+  },
+  shieldDing: (c, o) => arpeggio(c, o, [midi(88), midi(95)], { type: 'sine', dur: 0.4, gain: 0.15, step: 0.04 }),
+
+  // ---------- Blessing & curse ----------
+  blessingGained: (c, o) => [60, 64, 67, 72].forEach((n, i) => tone(c, o, { freq: midi(n + 12), type: 'triangle', dur: 0.8, attack: 0.08, gain: 0.08, delay: i * 0.05 })),
+  blessingLost: (c, o) => {
+    [72, 67, 63, 60].forEach((n, i) => tone(c, o, { freq: midi(n), freqEnd: midi(n - 5), type: 'triangle', dur: 0.5, gain: 0.1, delay: i * 0.12 }));
+    noise(c, o, { dur: 0.4, gain: 0.12, filter: 'bandpass', freq: 800, freqEnd: 200, delay: 0.45 }); // pfft
+  },
+  curseGained: (c, o, { curse } = {}) => CURSE_RIFF[curse]?.(c, o),
+  curseLifted: (c, o) => arpeggio(c, o, [midi(72), midi(76), midi(79), midi(84)], { type: 'sine', dur: 0.35, gain: 0.12, step: 0.07 }),
+  hiccup: (c, o) => tone(c, o, { freq: 300, freqEnd: 700, type: 'square', dur: 0.06, gain: 0.12 }),
+  tick: (c, o) => tone(c, o, { freq: 2200, type: 'square', dur: 0.02, gain: 0.05 }),
+
+  // ---------- Minotaur ----------
+  snort: (c, o) => {
+    noise(c, o, { dur: 0.25, gain: 0.25, filter: 'bandpass', freq: 300, q: 3 });
+    noise(c, o, { dur: 0.15, gain: 0.15, filter: 'highpass', freq: 1800, delay: 0.3 }); // gesek kuku
+  },
+  stampede: (c, o) => [0, 0.12, 0.24, 0.36].forEach((d) => tone(c, o, { freq: 70, freqEnd: 45, dur: 0.08, gain: 0.25, delay: d })),
+  ram: (c, o) => {
+    SFX.bump(c, o, { strength: 1 });
+    tone(c, o, { freq: 180, freqEnd: 120, type: 'sawtooth', dur: 0.6, attack: 0.05, gain: 0.08, delay: 0.15 }); // moo
+  },
+  aww: (c, o) => tone(c, o, { freq: 400, freqEnd: 900, type: 'triangle', dur: 0.4, gain: 0.12 }),
+  boop: (c, o) => tone(c, o, { freq: 600, freqEnd: 400, type: 'sine', dur: 0.1, gain: 0.15 }),
+
+  // ---------- Selundupan ----------
+  jackpot: (c, o) => arpeggio(c, o, [midi(72), midi(76), midi(79), midi(84), midi(88)], { type: 'square', dur: 0.15, gain: 0.1, step: 0.05 }),
+  explosion: (c, o) => {
+    noise(c, o, { dur: 0.25, gain: 0.08, filter: 'highpass', freq: 4000 }); // sekring
+    noise(c, o, { dur: 1.4, attack: 0.01, gain: 0.6, filter: 'lowpass', freq: 1200, freqEnd: 50, delay: 0.25 });
+    tone(c, o, { freq: 80, freqEnd: 30, dur: 0.6, gain: 0.5, delay: 0.25 });
+  },
+
+  // ---------- Hari ----------
+  dawn: (c, o) => arpeggio(c, o, [midi(62), midi(69), midi(74)], { type: 'triangle', dur: 0.3, gain: 0.1, step: 0.12 }),
+  gong: (c, o) => [55, 110.5, 166, 221].forEach((f, i) => tone(c, o, { freq: f, dur: 2.5, attack: 0.01, gain: 0.12 / (i + 1) })),
+  siren: (c, o) => [0, 0.5, 1].forEach((d) => tone(c, o, { freq: 500, freqEnd: 900, type: 'sawtooth', dur: 0.45, gain: 0.06, delay: d })),
+  reportTick: (c, o) => tone(c, o, { freq: 1400, type: 'square', dur: 0.03, gain: 0.05 }),
+  fanfare: (c, o) => arpeggio(c, o, [midi(67), midi(72), midi(76), midi(79)], { type: 'square', dur: 0.25, gain: 0.1, step: 0.12 }),
+  sadTrombone: (c, o) => [65, 64, 63].forEach((n, i) => tone(c, o, { freq: midi(n - 12), freqEnd: midi(n - 13 - (i === 2 ? 2 : 0)), type: 'sawtooth', dur: i === 2 ? 0.9 : 0.35, gain: 0.1, delay: i * 0.4 })),
+  uiClick: (c, o) => tone(c, o, { freq: 900, type: 'triangle', dur: 0.04, gain: 0.08 }),
+  alert: (c, o) => tone(c, o, { freq: 1200, type: 'square', dur: 0.08, gain: 0.07 }),
+};
+
+// Riff khas tiap dewa saat curse didapat.
+const CURSE_RIFF = {
+  dionysus: (c, o) => {
+    arpeggio(c, o, [midi(64), midi(67), midi(71)], { type: 'triangle', dur: 0.2, gain: 0.1, step: 0.1, detune: 40 });
+    SFX.hiccup(c, o);
+  },
+  chronos: (c, o) => [0, 0.15, 0.3, 0.45].forEach((d, i) => tone(c, o, { freq: i % 2 ? 1800 : 2400, type: 'square', dur: 0.03, gain: 0.08, delay: d })),
+  hades: (c, o) => tone(c, o, { freq: 55, freqEnd: 40, type: 'sawtooth', dur: 1.2, attack: 0.1, gain: 0.15 }),
+  aphrodite: (c, o) => arpeggio(c, o, [midi(72), midi(76), midi(79), midi(83), midi(86)], { type: 'sine', dur: 0.4, gain: 0.08, step: 0.05 }),
+  ares: (c, o) => arpeggio(c, o, [midi(60), midi(60), midi(67)], { type: 'sawtooth', dur: 0.18, gain: 0.1, step: 0.15 }),
+};
+
+// Event bus → SFX. Mengembalikan { name, opts } atau null.
+export const EVENT_SFX = {
+  pickup: () => ({ name: 'pickup' }),
+  deliver: () => ({ name: 'deliver' }),
+  cargo_full: () => ({ name: 'cargoFull' }),
+  package_expired: () => ({ name: 'expired' }),
+  collision: ({ impact }) => ({ name: 'bump', opts: { strength: Math.min(1, impact / 18) } }),
+  hard_landing: ({ fallSpeed }) => ({ name: 'landing', opts: { strength: Math.min(1, fallSpeed / 16) } }),
+  strike: (s, game) => {
+    const d = Math.hypot(s.x - game.car.x, s.z - game.car.z);
+    if (s.blocked) return { name: 'shieldDing' };
+    if (d > 70) return null;
+    return { name: 'thunder', opts: { near: s.hit ? 1 : Math.max(0.15, 1 - d / 70) } };
+  },
+  blessing_gained: () => ({ name: 'blessingGained' }),
+  blessing_lost: () => ({ name: 'blessingLost' }),
+  curse_gained: ({ curse }) => ({ name: 'curseGained', opts: { curse } }),
+  curse_lifted: () => ({ name: 'curseLifted' }),
+  smuggle_resolved: ({ scam }) => ({ name: scam ? 'explosion' : 'jackpot' }),
+  minotaur_windup: () => ({ name: 'snort' }),
+  minotaur_charge: () => ({ name: 'stampede' }),
+  minotaur_hit: () => ({ name: 'ram' }),
+  minotaur_charmed: () => ({ name: 'aww' }),
+  minotaur_nudge: () => ({ name: 'boop' }),
+  day_start: () => ({ name: 'dawn' }),
+  phase: ({ phase }) => (phase === 'dusk' ? { name: 'gong' } : phase === 'storm' ? { name: 'siren' } : null),
+  early_end_requested: () => ({ name: 'alert' }),
+  hiccup: () => ({ name: 'hiccup' }),
+  takeoff: () => ({ name: 'takeoff' }),
+};

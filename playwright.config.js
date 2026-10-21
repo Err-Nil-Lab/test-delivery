@@ -8,7 +8,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
     screenshot: 'only-on-failure',
     // WebGL lewat SwiftShader supaya jalan di mesin tanpa GPU (CI, container).
-    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
+    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] },
   },
   webServer: {
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',

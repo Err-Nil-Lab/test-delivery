@@ -1,7 +1,7 @@
 // Panel debug (tombol ` atau ?debug=1): percepat waktu, lompat jam, beri paket Zeus, god mode.
 import GUI from 'three/addons/libs/lil-gui.module.min.js';
 
-export function createDebugPanel(game, { visible }) {
+export function createDebugPanel(game, { visible, audio }) {
   const gui = new GUI({ title: 'Debug (`)' });
   const teleport = (p) => game.car.reset({ x: p.x, z: p.z, heading: Math.PI });
   const state = {
@@ -32,6 +32,13 @@ export function createDebugPanel(game, { visible }) {
   gui.add(game, 'timeScale', 0.25, 8, 0.25).name('Time scale');
   gui.add(game, 'god').name('God mode (tanpa damage)');
   for (const key of Object.keys(state)) if (key !== 'info') gui.add(state, key);
+  if (audio) {
+    const sound = gui.addFolder('Suara (M = mute)');
+    for (const bus of ['master', 'sfx', 'music', 'engine']) {
+      sound.add(audio.cfg, bus, 0, 1, 0.05).name(bus).onChange((v) => audio.setVolume(bus, v));
+    }
+    sound.close();
+  }
   gui.domElement.classList.add('debug-gui');
   gui.show(visible);
   window.addEventListener('keydown', (e) => {

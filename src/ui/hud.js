@@ -35,6 +35,8 @@ export class Hud {
     this.toastsEl = el('div', 'hud-toasts', this.root);
     this.arrowsEl = el('div', 'hud-arrows', this.root);
     this.vignetteEl = el('div', 'hud-vignette', this.root);
+    el('div', 'hud-storm-edge', this.root);
+    el('div', 'hud-speedlines', this.root);
     // Hades: pandangan menyempit ke lingkaran di sekitar van.
     this.darknessEl = el('div', 'hud-darkness', this.root);
     this.minimap = new Minimap(this.root, game);
@@ -51,8 +53,12 @@ export class Hud {
     });
     bus.on('blessing_gained', () => this.banner('⚡ Blessing Zeus', 'Kebal petir selama paket ini dibawa', 'zeus', 2.5));
     bus.on('blessing_lost', () => this.banner('The blessing belonged to the package, not you.', 'Blessing Zeus hilang. Petir bisa mengenaimu lagi.', 'lost', 4));
-    bus.on('deliver', ({ pay, dest }) => this.toast(`+$${pay} · ${dest}`, 'money'));
+    bus.on('deliver', ({ pay, dest }) => {
+      this.toast(`+$${pay} · ${dest}`, 'money');
+      this.pulse(this.moneyEl, 'bump');
+    });
     bus.on('pickup', ({ packageType, curse, dest }) => {
+      this.pulse(this.cargoEl, 'bump');
       const look = packageLook({ type: packageType, curse });
       this.toast(`Paket ${look.icon} ${look.name} diambil → ${dest}`);
     });
@@ -74,7 +80,10 @@ export class Hud {
       this.banner('💥 SCAM!', `${lines[Math.floor(Math.random() * lines.length)]} Bayaran $${pay} hangus.`, 'scam', 3.5);
     });
     bus.on('minotaur_charmed', () => this.toast('💘 Minotaur jatuh cinta padamu…', 'curse', 2));
-    bus.on('cargo_full', () => this.toast('Cargo penuh! Antar dulu paket yang dibawa.', 'warn'));
+    bus.on('cargo_full', () => {
+      this.toast('Cargo penuh! Antar dulu paket yang dibawa.', 'warn');
+      this.pulse(this.cargoEl, 'shake');
+    });
     bus.on('hint', ({ text }) => this.toast(text, 'hint', 6));
     bus.on('early_end_requested', () => this.toast('Masih siang. Tekan E lagi untuk pulang lebih awal.', 'warn', 3));
     bus.on('hard_landing', () => {
@@ -89,6 +98,13 @@ export class Hud {
       if (blocked) this.toast('⚡ Ditahan blessing Zeus', 'zeus', 1.2);
       else this.hitTimer = 0.5;
     });
+  }
+
+  // Mainkan ulang animasi CSS sekali (membal / bergetar).
+  pulse(node, cls) {
+    node.classList.remove(cls);
+    void node.offsetWidth;
+    node.classList.add(cls);
   }
 
   setText(node, text) {
@@ -241,6 +257,8 @@ export class Hud {
     this.hitTimer = Math.max(0, this.hitTimer - dt);
     this.vignetteEl.style.opacity = String(this.hitTimer * 1.6);
     this.root.classList.toggle('night', clock.phase !== PHASE.DAY);
+    this.root.classList.toggle('storm', clock.phase === PHASE.STORM || clock.phase === PHASE.LIMIT);
+    this.root.classList.toggle('fast', game.car.speed > game.cfg.car.maxSpeed * 0.92 && !game.car.airborne);
     document.body.classList.toggle('hades', Boolean(fx.visionRadius));
 
     this.updateArrows();

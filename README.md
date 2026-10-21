@@ -49,6 +49,7 @@ URL bisa diberi parameter:
 | <kbd>A</kbd> / <kbd>D</kbd> | Belok |
 | <kbd>E</kbd> | Berhenti di penanda, lalu ambil/antar paket. Di HQ: akhiri hari |
 | <kbd>Esc</kbd> | Pause (ada tombol unduh log playtest) |
+| <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
 
 ## Yang ada di graybox ini
@@ -65,6 +66,24 @@ URL bisa diberi parameter:
 | Damage | Tanpa HP. Tabrakan (termasuk menabrak undakan), petir, serudukan Minotaur, dan pendaratan keras menambah tagihan repair. Van punya 3 state visual; setelah state 3 muncul asap dan percikan. Angkanya baru terlihat di laporan |
 | Laporan | Income − damage − 10% bayaran paket yang masih dibawa (− biaya derek) = profit. Profit ≥ quota → lanjut, kurang → ulang dari Day 1 |
 | Run | 7 hari. Day 1 di run pertama di-script sebagai tutorial: paket Zeus dijamin menunggu di Gerbang Istana, dan panah ⚡ menunjukkan arahnya |
+
+## Suara dan juice
+
+Semua suara **disintesis dengan WebAudio**, jadi tidak ada file aset. Suara baru menyala setelah tombol pertama ditekan (aturan autoplay browser). **M** untuk mute. Volume tiap kanal (master, sfx, music, engine) bisa diatur di panel debug dan di `audio` pada `src/config.js`.
+
+- **Mesin van:** pitch mengikuti kecepatan, tersendat saat rusak berat, nyaris hilang saat melayang. Ban berdecit saat van tergelincir.
+- **Musik prosedural** bernuansa Yunani: riang di siang hari, minor dan lebih pelan saat senja, cepat dan tegang saat badai. Hades membuatnya gelap teredam; Dionysus membuatnya fals.
+- **SFX untuk setiap event:** ambil/antar paket, tabrakan, terjun dan mendarat, petir (makin keras makin dekat), perisai blessing, blessing hilang, riff khas tiap curse, dengus dan serudukan Minotaur, selundupan legit/meledak, gong senja, sirene badai, serta tick, fanfare, atau trombon sedih di laporan.
+- **Juice visual:**
+  - camera shake berbasis "trauma" dan hitstop singkat (tabrakan keras, serudukan, blessing hilang, scam);
+  - zoom kick dan partikel instanced (debu ban, percikan, koin, asap, serpihan);
+  - teks melayang (+$, BONK!, ZAP!, HIK!, boop);
+  - dunia memudar sesaat saat blessing hilang, van squash & stretch saat mendarat, kargo membal saat diambil;
+  - tepi layar merah berdenyut saat badai, garis kecepatan di kecepatan maksimal;
+  - angka laporan bergulir dan stempel LOLOS/GAGAL.
+- **`?calm=1`** mematikan guncangan, zoom, dan goyangan kamera (untuk yang mudah pusing). Intensitasnya diatur di `juice` pada `src/config.js`.
+
+Suara belum didengarkan oleh manusia: resep dan volumenya hasil tebakan awal, jadi perlu dicek di Mac dan di-tuning.
 
 ## Paket Selundupan (Chance)
 
@@ -139,7 +158,9 @@ src/
     damage.js      catatan damage dan state visual
     run.js         struktur 7 hari, quota, laporan
     events.js      event bus + telemetri playtest
-  render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur
+  render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur,
+                   juice (shake/hitstop/zoom), particle pool, teks melayang, efek per event
+  audio/           WebAudio: synth, resep SFX, mesin van, musik prosedural
   ui/              HUD, minimap, layar intro/laporan/menang/pause, panel debug
 tests/             unit test (Vitest)
 e2e/               smoke test di browser (Playwright)

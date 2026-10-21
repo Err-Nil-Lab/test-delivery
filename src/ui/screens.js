@@ -78,11 +78,11 @@ export class Screens {
       `<p class="eyebrow">Laporan akhir hari · pulang ${formatHour(report.endHour)}${report.towed ? ' (diderek)' : ''}</p>
       <h2>Day ${report.day}</h2>
       <table class="report-table">
-        <tr><td>Income (${report.deliveredCount} paket)</td><td>${money(report.income)}</td></tr>
-        <tr><td>Damage loss (repair)</td><td>${money(-report.damageLoss)}</td></tr>
-        <tr><td>Undelivered offering${undeliveredNote}</td><td>${money(-report.undeliveredLoss)}</td></tr>
+        <tr><td>Income (${report.deliveredCount} paket)</td><td data-count="${report.income}">${money(report.income)}</td></tr>
+        <tr><td>Damage loss (repair)</td><td data-count="${-report.damageLoss}">${money(-report.damageLoss)}</td></tr>
+        <tr><td>Undelivered offering${undeliveredNote}</td><td data-count="${-report.undeliveredLoss}">${money(-report.undeliveredLoss)}</td></tr>
         ${report.towed ? `<tr><td>Biaya derek</td><td>${money(-report.towFee)}</td></tr>` : ''}
-        <tr class="total"><td>Profit</td><td>${money(report.profit)}</td></tr>
+        <tr class="total"><td>Profit</td><td data-count="${report.profit}">${money(report.profit)}</td></tr>
         <tr class="quota"><td>Quota hari ini</td><td>$${report.quota}</td></tr>
       </table>
       <details ${report.damageEvents.length ? 'open' : ''}><summary>Rincian damage</summary><ul class="damage-list">${damageRows}</ul></details>
@@ -92,6 +92,20 @@ export class Screens {
       <button data-action="continue" data-primary>${next} (Enter)</button>`,
       { continue: onContinue },
     );
+    this.countUp();
+  }
+
+  // Angka laporan bergulir dari 0 ke nilai akhirnya.
+  countUp(duration = 800) {
+    const cells = [...this.overlay.querySelectorAll('[data-count]')];
+    const start = performance.now();
+    const tick = (now) => {
+      const k = Math.min(1, (now - start) / duration);
+      const ease = 1 - (1 - k) ** 3;
+      for (const cell of cells) cell.textContent = money(Math.round(Number(cell.dataset.count) * ease));
+      if (k < 1 && this.current === 'report') requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   showWin(run, { onRestart, onDownload }) {
