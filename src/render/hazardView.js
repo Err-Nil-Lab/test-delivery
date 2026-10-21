@@ -6,8 +6,9 @@ import { disposeObject } from './dispose.js';
 const TELEGRAPH_COLORS = { zone: '#ffe066', ambient: '#ffe066', storm: '#ff5a4d' };
 
 export class HazardView {
-  constructor(scene, bus) {
+  constructor(scene, bus, heightAt) {
     this.scene = scene;
+    this.heightAt = heightAt;
     this.telegraphs = new Map();
     this.effects = [];
     this.boltMat = new THREE.MeshBasicMaterial({ color: '#fdfbff', transparent: true });
@@ -19,7 +20,7 @@ export class HazardView {
   createTelegraph(strike) {
     const color = TELEGRAPH_COLORS[strike.kind];
     const group = new THREE.Group();
-    group.position.set(strike.x, 0.07, strike.z);
+    group.position.set(strike.x, this.heightAt(strike.x, strike.z) + 0.35, strike.z);
     const outline = new THREE.Mesh(
       new THREE.RingGeometry(strike.radius - 0.3, strike.radius, 40).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false }),
@@ -36,9 +37,10 @@ export class HazardView {
   impact(strike) {
     // Kilat: tabung tipis bergerigi dari langit ke tanah.
     const pts = [];
-    const top = 45;
+    const ground = this.heightAt(strike.x, strike.z);
+    const top = ground + 45;
     for (let i = 0; i <= 7; i++) {
-      const y = top * (1 - i / 7);
+      const y = ground + (top - ground) * (1 - i / 7);
       const jitter = i === 0 || i === 7 ? 0 : 1.6;
       pts.push(new THREE.Vector3(strike.x + (Math.random() - 0.5) * jitter, y, strike.z + (Math.random() - 0.5) * jitter));
     }
@@ -47,7 +49,7 @@ export class HazardView {
     this.effects.push({ mesh: bolt, life: 0.18, maxLife: 0.18, kind: 'bolt' });
 
     const scorch = new THREE.Mesh(this.scorchGeo, new THREE.MeshBasicMaterial({ color: '#1f1b16', transparent: true, opacity: 0.55, depthWrite: false }));
-    scorch.position.set(strike.x, 0.05, strike.z);
+    scorch.position.set(strike.x, ground + 0.32, strike.z);
     scorch.scale.setScalar(strike.radius * 0.8);
     this.scene.add(scorch);
     this.effects.push({ mesh: scorch, life: 1.5, maxLife: 1.5, kind: 'scorch' });
@@ -57,7 +59,7 @@ export class HazardView {
         new THREE.SphereGeometry(3.2, 24, 16),
         new THREE.MeshBasicMaterial({ color: '#ffe066', transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }),
       );
-      shield.position.set(strike.x, 1.4, strike.z);
+      shield.position.set(strike.x, ground + 1.4, strike.z);
       this.scene.add(shield);
       this.effects.push({ mesh: shield, life: 0.5, maxLife: 0.5, kind: 'shield' });
     }

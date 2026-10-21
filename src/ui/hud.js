@@ -1,5 +1,6 @@
 // HUD DOM: jam, hari, quota, cargo, blessing, prompt E, banner, hint, dan panah arah.
 import { formatHour, PHASE } from '../sim/clock.js';
+import { Minimap } from './minimap.js';
 
 const PHASE_ICONS = { [PHASE.DAY]: '☀', [PHASE.DUSK]: '🌇', [PHASE.STORM]: '⛈', [PHASE.LIMIT]: '⛈' };
 
@@ -32,6 +33,7 @@ export class Hud {
     this.toastsEl = el('div', 'hud-toasts', this.root);
     this.arrowsEl = el('div', 'hud-arrows', this.root);
     this.vignetteEl = el('div', 'hud-vignette', this.root);
+    this.minimap = new Minimap(this.root, game);
     this.arrows = new Map();
     this.bannerTimer = 0;
     this.hitTimer = 0;
@@ -50,6 +52,10 @@ export class Hud {
     bus.on('cargo_full', () => this.toast('Cargo penuh! Antar dulu paket yang dibawa.', 'warn'));
     bus.on('hint', ({ text }) => this.toast(text, 'hint', 6));
     bus.on('early_end_requested', () => this.toast('Masih siang. Tekan E lagi untuk pulang lebih awal.', 'warn', 3));
+    bus.on('minotaur_hit', () => {
+      this.hitTimer = 0.6;
+      this.toast('Diseruduk Minotaur!', 'warn', 1.5);
+    });
     bus.on('strike_hit', ({ blocked }) => {
       if (blocked) this.toast('⚡ Ditahan blessing Zeus', 'zeus', 1.2);
       else this.hitTimer = 0.5;
@@ -113,6 +119,10 @@ export class Hud {
       label: p.dest.name,
       kind: p.type === 'zeus' ? 'zeus' : 'dest',
     }));
+    const zeusWaiting = game.packages.waiting.find((p) => p.type === 'zeus');
+    if (zeusWaiting && !game.packages.blessed) {
+      targets.push({ key: `zeus-${zeusWaiting.id}`, x: zeusWaiting.pickup.x, z: zeusWaiting.pickup.z, label: 'Paket Zeus', kind: 'zeus' });
+    }
     const hq = game.world.hq.spawn;
     if (game.clock.hour >= game.cfg.time.duskHour - 1 && !game.inHQ) {
       targets.push({ key: 'hq', x: hq.x, z: hq.z, label: 'HQ', kind: 'hq' });
@@ -141,7 +151,10 @@ export class Hud {
       const dx = p.x - w / 2;
       const dy = p.y - h / 2;
       const scale = Math.min((w / 2 - margin) / Math.abs(dx || 1e-6), (h / 2 - margin) / Math.abs(dy || 1e-6));
-      node.style.transform = `translate(${w / 2 + dx * scale}px, ${h / 2 + dy * scale}px)`;
+      const ax = w / 2 + dx * scale;
+      // Jangan menimpa minimap di pojok kanan bawah.
+      const ay = ax > w - 240 ? Math.min(h / 2 + dy * scale, h - 250) : h / 2 + dy * scale;
+      node.style.transform = `translate(${ax}px, ${ay}px)`;
       node.querySelector('.tip').style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
     }
     for (const [key, node] of this.arrows) {
@@ -180,5 +193,6 @@ export class Hud {
     this.root.classList.toggle('night', clock.phase !== PHASE.DAY);
 
     this.updateArrows();
+    this.minimap.update();
   }
 }

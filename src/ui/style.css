@@ -82,9 +82,27 @@ kbd {
   color: #1a1a1a;
 }
 
-.world-label.zone {
-  color: #8a6a00;
-  font-size: 13px;
+.world-label.district {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: rgba(40, 38, 34, 0.55);
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.mino-alert {
+  font: 900 26px/1 system-ui, sans-serif;
+  color: #ff3b2f;
+  text-shadow: 0 0 6px #fff;
+  animation: pulse 0.15s infinite alternate;
+}
+
+.minimap {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  border-radius: 12px;
+  background: rgba(18, 20, 32, 0.6);
 }
 
 .tag {

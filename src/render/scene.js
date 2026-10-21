@@ -5,6 +5,7 @@ import { WorldView } from './worldView.js';
 import { CarView } from './carView.js';
 import { MarkersView } from './markersView.js';
 import { HazardView } from './hazardView.js';
+import { MinotaurView } from './minotaurView.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
@@ -66,10 +67,10 @@ export class View {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera;
-    sc.left = -60;
-    sc.right = 60;
-    sc.top = 60;
-    sc.bottom = -60;
+    sc.left = -70;
+    sc.right = 70;
+    sc.top = 70;
+    sc.bottom = -70;
     sc.near = 1;
     sc.far = 200;
     this.sun.shadow.bias = -0.0005;
@@ -78,7 +79,8 @@ export class View {
     this.worldView = new WorldView(this.scene, game.world);
     this.carView = new CarView(this.scene, game.bus);
     this.markersView = new MarkersView(this.scene, game);
-    this.hazardView = new HazardView(this.scene, game.bus);
+    this.hazardView = new HazardView(this.scene, game.bus, game.world.heightAt);
+    this.minotaurView = new MinotaurView(this.scene, game);
 
     this.target = new THREE.Vector3(game.car.x, 0, game.car.z);
     this.flash = 0;
@@ -106,14 +108,15 @@ export class View {
   }
 
   snapCamera() {
-    this.target.set(this.game.car.x, 0, this.game.car.z);
+    const { car, world } = this.game;
+    this.target.set(car.x, world.heightAt(car.x, car.z), car.z);
   }
 
   update(dt) {
-    const { car, clock } = this.game;
+    const { car, clock, world } = this.game;
 
     // Kamera mengikuti van dengan sedikit look-ahead ke arah gerak.
-    const desired = new THREE.Vector3(car.x + car.vx * 0.4, 0, car.z + car.vz * 0.4);
+    const desired = new THREE.Vector3(car.x + car.vx * 0.4, world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
     this.target.lerp(desired, 1 - Math.exp(-4 * dt));
     this.camera.position.copy(this.target).add(ISO_OFFSET);
     this.camera.lookAt(this.target);
@@ -132,6 +135,7 @@ export class View {
     this.carView.update(dt, this.game, night);
     this.markersView.update(dt, this.game);
     this.hazardView.update(dt, this.game);
+    this.minotaurView.update(dt, this.game);
   }
 
   render() {
@@ -141,7 +145,7 @@ export class View {
 
   // Posisi dunia → piksel layar (untuk panah penunjuk arah di HUD).
   project(x, z, y = 1) {
-    const v = new THREE.Vector3(x, y, z).project(this.camera);
+    const v = new THREE.Vector3(x, this.game.world.heightAt(x, z) + y, z).project(this.camera);
     return {
       x: ((v.x + 1) / 2) * window.innerWidth,
       y: ((1 - v.y) / 2) * window.innerHeight,

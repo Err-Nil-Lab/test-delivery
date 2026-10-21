@@ -40,7 +40,7 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
   // Senja lalu badai pemburu.
   await page.evaluate(() => {
     const g = window.__hex.game;
-    g.car.reset({ x: -40, z: 30, heading: Math.PI });
+    g.car.reset({ ...g.world.ref.cityRoad, heading: Math.PI / 2 });
     g.clock.setHour(18);
   });
   await expect(page.locator('.hud-banner')).toContainText('SENJA');

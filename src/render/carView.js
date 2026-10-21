@@ -15,6 +15,8 @@ function part(geometry, material, x, y, z) {
 export class CarView {
   constructor(scene, bus) {
     this.root = new THREE.Group();
+    this.root.rotation.order = 'YXZ'; // heading lalu pitch tanjakan
+    this.pitch = 0;
     this.body = new THREE.Group();
     this.root.add(this.body);
     scene.add(this.root);
@@ -93,10 +95,15 @@ export class CarView {
   }
 
   update(dt, game, night) {
-    const { car, damage, packages } = game;
+    const { car, damage, packages, world } = game;
     this.time += dt;
-    this.root.position.set(car.x, 0, car.z);
+    const fx = Math.sin(car.heading) * 1.8;
+    const fz = Math.cos(car.heading) * 1.8;
+    const targetPitch = Math.atan2(world.heightAt(car.x + fx, car.z + fz) - world.heightAt(car.x - fx, car.z - fz), 3.6);
+    this.pitch += (targetPitch - this.pitch) * (1 - Math.exp(-12 * dt));
+    this.root.position.set(car.x, world.heightAt(car.x, car.z), car.z);
     this.root.rotation.y = car.heading;
+    this.root.rotation.x = -this.pitch;
 
     const key = packages.cargo.map((p) => p.id).join(',');
     if (key !== this.cargoKey) {
@@ -116,14 +123,14 @@ export class CarView {
       this.smokeTimer -= dt;
       if (this.smokeTimer <= 0) {
         this.smokeTimer = 0.35 - damage.overflow * 0.27;
-        const back = { x: car.x - Math.sin(car.heading) * 1.8, z: car.z - Math.cos(car.heading) * 1.8 };
-        this.emit('#5d5d5d', back.x, 1.8, back.z, 2.5, 1.4, 0.6 + damage.overflow * 0.8);
+        const back = { x: car.x - fx, z: car.z - fz };
+        this.emit('#5d5d5d', back.x, world.heightAt(back.x, back.z) + 1.8, back.z, 2.5, 1.4, 0.6 + damage.overflow * 0.8);
       }
       if (damage.overflow > 0.3) {
         this.sparkTimer -= dt;
         if (this.sparkTimer <= 0) {
           this.sparkTimer = 0.5 - damage.overflow * 0.35;
-          this.emit('#ffb347', car.x, 0.6, car.z, 4, 0.4, 0.25);
+          this.emit('#ffb347', car.x, world.heightAt(car.x, car.z) + 0.6, car.z, 4, 0.4, 0.25);
         }
       }
     }

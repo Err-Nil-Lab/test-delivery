@@ -49,7 +49,7 @@ export class MarkersView {
 
   createPickup(pkg) {
     const group = new THREE.Group();
-    group.position.set(pkg.pickup.x, 0, pkg.pickup.z);
+    group.position.set(pkg.pickup.x, this.game.world.heightAt(pkg.pickup.x, pkg.pickup.z) + 0.3, pkg.pickup.z);
     const color = COLORS[pkg.type];
     group.add(beam(color, pkg.type === 'zeus' ? 18 : 10, pkg.type === 'zeus' ? 1.1 : 0.8));
     group.add(ring(color, this.game.cfg.packages.pickupRadius));
@@ -79,7 +79,7 @@ export class MarkersView {
 
   createDest(pkg) {
     const group = new THREE.Group();
-    group.position.set(pkg.dest.x, 0, pkg.dest.z);
+    group.position.set(pkg.dest.x, this.game.world.heightAt(pkg.dest.x, pkg.dest.z) + 0.3, pkg.dest.z);
     const color = pkg.type === 'zeus' ? COLORS.zeusDest : COLORS.dest;
     group.add(beam(color, 22, 1.3));
     group.add(ring(color, this.game.cfg.packages.dropoffRadius));

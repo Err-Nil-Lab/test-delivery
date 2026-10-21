@@ -100,6 +100,7 @@ requestAnimationFrame(frame);
 // Hook untuk smoke test dan debugging dari console.
 window.__hex = {
   game,
+  view,
   state: () => ({
     run: game.run.state,
     day: game.run.day,

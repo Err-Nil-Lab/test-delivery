@@ -3,6 +3,7 @@ import GUI from 'three/addons/libs/lil-gui.module.min.js';
 
 export function createDebugPanel(game, { visible }) {
   const gui = new GUI({ title: 'Debug (`)' });
+  const teleport = (p) => game.car.reset({ x: p.x, z: p.z, heading: Math.PI });
   const state = {
     get info() {
       return `seed ${game.seed} · run ${game.run.runCount}`;
@@ -12,8 +13,11 @@ export function createDebugPanel(game, { visible }) {
     'Lompat 20:00 (badai)': () => game.clock.setHour(20),
     'Lompat 23:45': () => game.clock.setHour(23.75),
     'Beri paket Zeus': () => game.packages.debugGiveZeus(game.car),
-    'Teleport ke plant': () => game.car.reset({ ...game.world.plant.dropoff, heading: Math.PI }),
-    'Teleport ke HQ': () => game.car.reset(game.world.hq.spawn),
+    'Teleport: HQ': () => game.car.reset(game.world.hq.spawn),
+    'Teleport: Gerbang Istana': () => teleport(game.world.zeusPickup),
+    'Teleport: Padang Minotaur': () => teleport(game.world.ref.meadow),
+    'Teleport: kaki gunung': () => teleport(game.world.ref.serpentineFoot),
+    'Teleport: plant': () => teleport(game.world.plant.dropoff),
     'Akhiri hari sekarang': () => game.endDay(),
   };
   gui.add(state, 'info').name('Info').disable().listen();
