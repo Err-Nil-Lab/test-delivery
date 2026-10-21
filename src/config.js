@@ -72,6 +72,21 @@ export const CONFIG = {
     zeus: { slots: 2, pay: 400, chance: 0.3, maxPerDay: 1 },
   },
 
+  // Kategori Chance: paket selundupan. Persentase scam terlihat sejak awal, bayaran naik sebanding.
+  // Diundi saat diantar: legit = uang, scam = uang hangus + paket meledak (damage).
+  smuggle: {
+    fromDay: 3, // GDD: Day 3 = paket selundupan pertama
+    chance: 0.3,
+    maxWaiting: 2,
+    slots: 1,
+    scamOptions: [0.05, 0.1, 0.2, 0.3, 0.4],
+    payBase: 1.3, // bayaran = rumus Safe × (payBase + payPerScam × peluang scam)
+    payPerScam: 4, // 5% → ×1,5 · 40% → ×2,9
+    maxPay: 450,
+    scamDamage: 120, // TODO(GDD): biaya repair saat paket scam meledak
+    scamKnockback: 10,
+  },
+
   // Kategori Curse: paket dewa dengan efek buruk selama dibawa, hilang saat diantar.
   curse: {
     fromDay: 2, // TODO(GDD): hari curse pertama muncul

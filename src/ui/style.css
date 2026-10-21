@@ -664,3 +664,23 @@ summary {
 body.hades .labels .tag:not(.dest) {
   visibility: hidden;
 }
+
+/* ---------- Selundupan ---------- */
+.tag.smuggle {
+  background: #111;
+  border: 2px solid #dc2626;
+}
+
+.tag small.scam {
+  color: #f87171;
+  font-weight: 800;
+}
+
+.hud-banner.scam .title {
+  color: #ff8a1f;
+  font-size: 52px;
+}
+
+.hud-banner.legit .title {
+  color: var(--green);
+}

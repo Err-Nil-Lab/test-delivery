@@ -84,6 +84,7 @@ export function cargoEffects(cargo, cfg) {
 // Tampilan paket untuk HUD, marker, dan minimap.
 export function packageLook(pkg) {
   if (pkg.type === 'zeus') return { color: '#ffd84a', icon: '⚡', name: 'Zeus' };
+  if (pkg.type === 'smuggle') return { color: '#dc2626', icon: '🕶️', name: `Selundupan · scam ${Math.round(pkg.scamChance * 100)}%` };
   if (pkg.type === 'curse') {
     const c = CURSES[pkg.curse];
     return { color: c.color, icon: c.icon, name: `${c.god} · ${c.title}` };

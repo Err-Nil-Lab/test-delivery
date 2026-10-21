@@ -7,10 +7,11 @@ import { CURSES, CURSE_IDS, cargoEffects } from './curses.js';
 const round5 = (v) => Math.round(v / 5) * 5;
 
 export class PackageSystem {
-  constructor(world, cfg, rng, bus, curseCfg) {
+  constructor(world, cfg, rng, bus, curseCfg, smuggleCfg) {
     this.world = world;
     this.cfg = cfg;
     this.curseCfg = curseCfg;
+    this.smuggleCfg = smuggleCfg;
     this.rng = rng;
     this.bus = bus;
     this.nextId = 1;
@@ -21,6 +22,7 @@ export class PackageSystem {
     this.waiting = [];
     this.cargo = [];
     this.delivered = [];
+    this.scammed = [];
     this.spawnTimer = 0;
     this.nearTimer = 0;
     this.zeusSpawnedToday = 0;
@@ -134,7 +136,17 @@ export class PackageSystem {
     }
     const candidates = this.freePoints();
     if (!candidates.length) return null;
+    if (allowZeus && this.canSpawnSmuggle() && this.rng.chance(this.smuggleCfg.chance)) {
+      const pkg = this.spawnAt('smuggle', this.rng.pick(candidates));
+      if (pkg) return pkg;
+    }
     return this.spawnAt('safe', this.rng.pick(candidates));
+  }
+
+  canSpawnSmuggle() {
+    const s = this.smuggleCfg;
+    if (!s || this.day < s.fromDay) return false;
+    return this.waiting.filter((p) => p.type === 'smuggle').length < s.maxWaiting;
   }
 
   spawnNear(car) {
@@ -175,6 +187,14 @@ export class PackageSystem {
       dest = this.world.plant.dropoff;
       pay = this.cfg.zeus.pay;
       slots = this.cfg.zeus.slots;
+    } else if (type === 'smuggle') {
+      const s = this.smuggleCfg;
+      dest = this.pickDestination(pickup, this.cfg.minTripDistance);
+      if (!dest) return null;
+      const scamChance = this.rng.pick(s.scamOptions);
+      pay = round5(Math.min(s.maxPay, this.safePay(pickup, dest) * (s.payBase + s.payPerScam * scamChance)));
+      slots = s.slots;
+      return { ...this.basePackage(type, pickup, dest, pay, slots), scamChance };
     } else if (type === 'curse') {
       const c = this.curseCfg;
       dest = this.pickDestination(pickup, c.minTripDistance, CURSES[curse].destName);
@@ -187,17 +207,11 @@ export class PackageSystem {
       pay = round5(this.safePay(pickup, dest));
       slots = this.cfg.safe.slots;
     }
-    return {
-      id: this.nextId++,
-      type,
-      curse,
-      slots,
-      pay,
-      pickup,
-      dest,
-      age: 0,
-      lifetime: this.cfg.waitingLifetime,
-    };
+    return { ...this.basePackage(type, pickup, dest, pay, slots), curse };
+  }
+
+  basePackage(type, pickup, dest, pay, slots) {
+    return { id: this.nextId++, type, curse: null, slots, pay, pickup, dest, age: 0, lifetime: this.cfg.waitingLifetime };
   }
 
   findPickup(car) {
@@ -237,6 +251,15 @@ export class PackageSystem {
     if (action.kind === 'deliver') {
       for (const pkg of action.packages) {
         this.cargo = this.cargo.filter((p) => p !== pkg);
+        // Selundupan diundi saat diantar: scam = bayaran hangus.
+        if (pkg.type === 'smuggle') {
+          pkg.scam = this.rng.chance(pkg.scamChance);
+          this.bus.emit('smuggle_resolved', { id: pkg.id, scamChance: pkg.scamChance, scam: pkg.scam, pay: pkg.pay, x: car.x, z: car.z, hour });
+          if (pkg.scam) {
+            this.scammed.push(pkg);
+            continue;
+          }
+        }
         this.delivered.push(pkg);
         this.bus.emit('deliver', { id: pkg.id, packageType: pkg.type, curse: pkg.curse, pay: pkg.pay, dest: pkg.dest.name, hour });
         if (pkg.type === 'zeus') this.bus.emit('blessing_lost', { x: car.x, z: car.z, hour });
@@ -256,6 +279,16 @@ export class PackageSystem {
     if (pkg.type === 'zeus') this.bus.emit('blessing_gained', { hour });
     if (pkg.type === 'curse') this.bus.emit('curse_gained', { curse: pkg.curse, hour });
     return action;
+  }
+
+  // Panel debug: langsung masukkan paket selundupan ke cargo bila slot cukup.
+  debugGiveSmuggle(car) {
+    if (this.slotsFree < this.smuggleCfg.slots) return false;
+    const pkg = this.makePackage('smuggle', { id: 'debug', name: 'Debug', x: car.x, z: car.z });
+    if (!pkg) return false;
+    pkg.held = 0;
+    this.cargo.push(pkg);
+    return true;
   }
 
   // Panel debug: langsung masukkan paket curse ke cargo bila slot cukup.

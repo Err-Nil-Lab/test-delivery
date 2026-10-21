@@ -27,6 +27,7 @@ const TRACKED = new Set([
   'blessing_gained',
   'blessing_lost',
   'curse_gained',
+  'smuggle_resolved',
   'curse_lifted',
   'phase',
   'strike_hit',

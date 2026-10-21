@@ -5,6 +5,7 @@ export const DAMAGE_LABELS = {
   storm: 'Badai Zeus',
   minotaur: 'Minotaur',
   landing: 'Terjun bebas',
+  scam: 'Selundupan meledak',
 };
 
 export class DamageLedger {

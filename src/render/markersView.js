@@ -42,6 +42,7 @@ export class MarkersView {
     this.crateMats = {
       safe: new THREE.MeshStandardMaterial({ color: '#b98b55' }),
       zeus: new THREE.MeshStandardMaterial({ color: '#ffd84a', emissive: '#ffb800', emissiveIntensity: 0.7 }),
+      smuggle: new THREE.MeshStandardMaterial({ color: '#141414', emissive: '#7f1d1d', emissiveIntensity: 0.6 }),
     };
     this.arrowGeo = new THREE.ConeGeometry(0.9, 2.2, 3).rotateX(Math.PI / 2);
     this.arrowGeo.userData.shared = true;
@@ -76,6 +77,7 @@ export class MarkersView {
     const curse = pkg.type === 'curse' ? `<small class="curse-name">${look.name}</small>` : '';
     const label = tag(`<b>${icon}$${pkg.pay}</b>${curse}<small>→ ${pkg.dest.name}${slots}</small>`, pkg.type);
     if (pkg.type === 'curse') label.element.style.background = color;
+    if (pkg.type === 'smuggle') label.element.innerHTML = `<b>${icon}$${pkg.pay}</b><small class="scam">scam ${Math.round(pkg.scamChance * 100)}%</small><small>→ ${pkg.dest.name}</small>`;
     label.position.y = special ? 6 : 4.5;
     group.add(label);
 

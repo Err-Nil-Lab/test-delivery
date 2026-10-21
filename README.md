@@ -5,7 +5,7 @@ Prototype graybox untuk **core loop** Hermes Express (H.EX), dibuat dengan Three
 - **H1 (hook):** pemain bereaksi saat blessing Zeus hilang setelah paket diantar, lalu mulai memikirkan kapan dan di mana mengantar paket dewa.
 - **H2 (greed):** pemain tergoda mengambil "satu paket lagi" menjelang senja.
 
-Scope-nya: paket Safe + Zeus + kategori **Curse** (5 dewa), petir, badai pemburu, dan Minotaur. Paket selundupan dan upgrade belum masuk.
+Scope-nya: paket Safe, Zeus, **Selundupan** (Chance), dan kategori **Curse** (5 dewa), plus petir, badai pemburu, dan Minotaur. Upgrade belum masuk.
 
 ## Map
 
@@ -66,6 +66,16 @@ URL bisa diberi parameter:
 | Laporan | Income − damage − 10% bayaran paket yang masih dibawa (− biaya derek) = profit. Profit ≥ quota → lanjut, kurang → ulang dari Day 1 |
 | Run | 7 hari. Day 1 di run pertama di-script sebagai tutorial: paket Zeus dijamin menunggu di Gerbang Istana, dan panah ⚡ menunjukkan arahnya |
 
+## Paket Selundupan (Chance)
+
+Peti hitam bersinar merah yang muncul acak di titik paket biasa, mulai Day 3 (`smuggle.fromDay`, sesuai GDD), paling banyak 2 menunggu di map. Labelnya menulis **persentase scam** (5–40%), dan bayarannya naik sebanding: rumus Safe × (1,3 + 4 × peluang scam), jadi 5% ≈ ×1,5 dan 40% ≈ ×2,9.
+
+Hasilnya diundi saat diantar:
+- **Legit:** bayaran masuk, banner "💰 Legit!".
+- **Scam:** bayaran hangus, paket meledak (bola api, layar berkilat, van terlempar), dan tagihan repair $120 (`smuggle.scamDamage`) masuk laporan sebagai "Selundupan meledak". Banner "💥 SCAM!" memakai kalimat komedi acak.
+
+Selundupan bisa dibawa bersama curse maupun Zeus. Panel debug punya tombol untuk langsung memberi paket selundupan.
+
 ## Paket Curse
 
 Kategori sendiri: paket dewa yang membawa **efek buruk selama dibawa**, dan efeknya hilang begitu paket diantar (*"The curse belonged to the package too."*). Bayarannya ±2× paket Safe, makan 1 slot, dan tujuannya selalu jauh. Muncul mulai Day 2 (`curse.fromDay`), paling banyak 1 menunggu di map dan 2 per hari.
@@ -99,7 +109,7 @@ Karena map ini lebih besar, satu hari dibuat 2 menit sampai senja dan kecepatan 
 
 Panel debug (<kbd>`</kbd>) berisi time scale, lompat ke 17:30/18:00/20:00/23:45, beri paket Zeus, teleport (HQ, Gerbang Istana, Padang Minotaur, kaki gunung, plant), god mode, dan akhiri hari.
 
-Selama bermain, game mencatat event playtest: pickup, deliver, blessing didapat/hilang, sambaran yang kena, serudukan Minotaur, pendaratan keras, curse didapat/terangkat (beserta lama dibawa), tabrakan, pergantian fase, jam pulang, dan ringkasan laporan. Setiap event membawa hari dan jam in-game. Log bisa diunduh sebagai JSON dari layar pause atau layar menang. Data ini membantu menjawab H2, misalnya apakah pemain masih mengambil paket setelah 17:00 dan jam berapa mereka pulang.
+Selama bermain, game mencatat event playtest: pickup, deliver, blessing didapat/hilang, sambaran yang kena, serudukan Minotaur, pendaratan keras, curse didapat/terangkat (beserta lama dibawa), hasil selundupan (legit/scam), tabrakan, pergantian fase, jam pulang, dan ringkasan laporan. Setiap event membawa hari dan jam in-game. Log bisa diunduh sebagai JSON dari layar pause atau layar menang. Data ini membantu menjawab H2, misalnya apakah pemain masih mengambil paket setelah 17:00 dan jam berapa mereka pulang.
 
 ### Membagikan untuk playtest online
 
@@ -122,7 +132,7 @@ src/
     collision.js   collider kotak berotasi, dinding kapsul, lingkaran + grid spasial
     car.js         driving arcade, tanjakan, collision, impuls
     minotaurs.js   AI Minotaur: berkeliaran → ancang-ancang → menyeruduk → pusing (+ mode Ares/Aphrodite)
-    curses.js      definisi 5 curse dan gabungan efek dari cargo
+    curses.js      definisi 5 curse, gabungan efek dari cargo, dan tampilan tiap tipe paket
     clock.js       jam dan fase hari
     packages.js    spawn, cargo/slot, ambil/antar, blessing
     hazards.js     petir zona dan badai pemburu

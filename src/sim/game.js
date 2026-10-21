@@ -23,7 +23,7 @@ export class Game {
     this.car = new Car(config.car);
     this.clock = new DayClock(config.time);
     this.damage = new DamageLedger(config.damage);
-    this.packages = new PackageSystem(this.world, config.packages, this.rng, this.bus, config.curse);
+    this.packages = new PackageSystem(this.world, config.packages, this.rng, this.bus, config.curse, config.smuggle);
     this.hazards = new HazardSystem(this.world, config.lightning, config.storm, this.rng, this.bus);
     this.minotaurs = new MinotaurSystem(this.world, config.minotaur, this.rng, this.bus, config.curse.effects);
     this.run = new RunState(config.run);
@@ -197,10 +197,25 @@ export class Game {
     this.bus.emit('hard_landing', { fallSpeed: round2(fallSpeed), cost: Math.round(cost) });
   }
 
+  // Selundupan scam meledak saat diantar: van terlempar sedikit dan ada tagihan repair.
+  explodeScams(result, hour) {
+    for (let i = result.packages.filter((p) => p.scam).length; i > 0; i--) {
+      const s = this.cfg.smuggle;
+      const angle = this.rng.range(0, Math.PI * 2);
+      this.car.applyImpulse(Math.cos(angle) * s.scamKnockback, Math.sin(angle) * s.scamKnockback, this.rng.chance(0.5) ? 3 : -3);
+      this.damage.add('scam', this.god ? 0 : s.scamDamage, hour);
+    }
+  }
+
   interact() {
     const hour = this.clock.hour;
     const result = this.packages.interact(this.car, hour);
     if (result) {
+      if (result.kind === 'deliver') this.explodeScams(result, hour);
+      if (result.kind === 'pickup' && result.pkg.type === 'smuggle' && !this.smuggleHintShown) {
+        this.smuggleHintShown = true;
+        this.hint('Paket selundupan: bayaran besar, tapi bisa saja scam dan meledak saat diantar. Persentasenya tertulis di label.');
+      }
       if (result.kind === 'pickup' && result.pkg.type === 'curse' && !this.curseHintShown) {
         this.curseHintShown = true;
         this.hint('Paket terkutuk! Efeknya ikut pergi begitu paket ini diantar.');

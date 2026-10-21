@@ -89,6 +89,9 @@ export class View {
       this.flash = Math.max(this.flash, s.hit ? 1 : d < 30 ? 0.45 : 0.15);
     });
     game.bus.on('day_start', () => this.snapCamera());
+    game.bus.on('smuggle_resolved', (e) => {
+      if (e.scam) this.flash = 1;
+    });
 
     this.resize();
     window.addEventListener('resize', () => this.resize());

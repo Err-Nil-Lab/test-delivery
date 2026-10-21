@@ -64,6 +64,15 @@ export class Hud {
       const c = CURSES[curse];
       this.banner('The curse belonged to the package too.', `Kutukan ${c.god} terangkat. Lega!`, 'lifted', 3);
     });
+    bus.on('smuggle_resolved', ({ scam, pay }) => {
+      if (!scam) {
+        this.banner('💰 Legit!', `Barangnya aman. +$${pay}`, 'legit', 2.5);
+        return;
+      }
+      this.hitTimer = 0.8;
+      const lines = ['Isinya cuma batu bata.', 'Isinya bebek karet… yang meledak.', 'Penerimanya kabur sebelum paketnya meledak.', 'Ternyata kiriman iseng dari Eris.', 'Segelnya palsu. Isinya kembang api.'];
+      this.banner('💥 SCAM!', `${lines[Math.floor(Math.random() * lines.length)]} Bayaran $${pay} hangus.`, 'scam', 3.5);
+    });
     bus.on('minotaur_charmed', () => this.toast('💘 Minotaur jatuh cinta padamu…', 'curse', 2));
     bus.on('cargo_full', () => this.toast('Cargo penuh! Antar dulu paket yang dibawa.', 'warn'));
     bus.on('hint', ({ text }) => this.toast(text, 'hint', 6));
@@ -210,7 +219,7 @@ export class Hud {
     const slots = [];
     for (const p of packages.cargo) {
       const look = packageLook(p);
-      const style = p.type === 'curse' ? `;background:${look.color}` : '';
+      const style = p.type === 'curse' || p.type === 'smuggle' ? `;background:${look.color}` : '';
       slots.push(`<span class="slot ${p.type}" style="flex:${p.slots}${style}">${look.icon || '$' + p.pay}</span>`);
     }
     for (let i = 0; i < packages.slotsFree; i++) slots.push('<span class="slot empty" style="flex:1"></span>');

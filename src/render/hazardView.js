@@ -15,6 +15,7 @@ export class HazardView {
     this.scorchGeo = new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2);
     this.scorchGeo.userData.shared = true;
     bus.on('strike', (s) => this.impact(s));
+    bus.on('smuggle_resolved', (e) => e.scam && this.explode(e));
   }
 
   createTelegraph(strike) {
@@ -65,6 +66,23 @@ export class HazardView {
     }
   }
 
+  // Paket selundupan scam meledak: bola api, bekas gosong.
+  explode({ x, z }) {
+    const ground = this.heightAt(x, z);
+    const fireball = new THREE.Mesh(
+      new THREE.SphereGeometry(2, 20, 14),
+      new THREE.MeshBasicMaterial({ color: '#ff8a1f', transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
+    );
+    fireball.position.set(x, ground + 2, z);
+    this.scene.add(fireball);
+    this.effects.push({ mesh: fireball, life: 0.6, maxLife: 0.6, kind: 'fireball' });
+    const scorch = new THREE.Mesh(this.scorchGeo, new THREE.MeshBasicMaterial({ color: '#1f1b16', transparent: true, opacity: 0.55, depthWrite: false }));
+    scorch.position.set(x, ground + 0.32, z);
+    scorch.scale.setScalar(4);
+    this.scene.add(scorch);
+    this.effects.push({ mesh: scorch, life: 3, maxLife: 3, kind: 'scorch' });
+  }
+
   update(dt, game) {
     const live = new Set();
     for (const s of game.hazards.strikes) {
@@ -85,6 +103,7 @@ export class HazardView {
       const k = Math.max(0, fx.life / fx.maxLife);
       fx.mesh.material.opacity = fx.kind === 'scorch' ? k * 0.55 : k;
       if (fx.kind === 'shield') fx.mesh.scale.setScalar(1 + (1 - k) * 0.8);
+      if (fx.kind === 'fireball') fx.mesh.scale.setScalar(1 + (1 - k) * 3);
     }
     for (const fx of this.effects.filter((f) => f.life <= 0)) {
       this.scene.remove(fx.mesh);

@@ -20,6 +20,7 @@ export function createDebugPanel(game, { visible }) {
     'Teleport: plant': () => teleport(game.world.plant.dropoff),
     'Teleport: Gubuk Gembala': () => teleport(game.world.ref.shepherdHut),
     'Teleport: Gubuk Penebang': () => teleport(game.world.ref.woodcutterHut),
+    'Beri paket selundupan 🕶️': () => game.packages.debugGiveSmuggle(game.car),
     'Curse: Dionysus 🍷': () => game.packages.debugGiveCurse(game.car, 'dionysus'),
     'Curse: Chronos ⏳': () => game.packages.debugGiveCurse(game.car, 'chronos'),
     'Curse: Hades 💀': () => game.packages.debugGiveCurse(game.car, 'hades'),
