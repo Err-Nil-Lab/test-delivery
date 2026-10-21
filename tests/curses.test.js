@@ -160,7 +160,7 @@ describe('Kategori Curse', () => {
 
       // Van menjauh keluar padang: Minotaur ikut keluar wilayahnya.
       teleport(game, { x: m.territory.maxX + 20, z: m.z });
-      stepFor(game, 3);
+      stepFor(game, 6);
       expect(m.x).toBeGreaterThan(m.territory.maxX);
     });
 

@@ -4,12 +4,14 @@
 // - tengah kiri: padang terbuka tempat Minotaur
 // - bawah: Base (HQ) di kiri, perumahan di tengah, kota padat di kanan
 // Koordinat ditulis dalam piksel sketsa lalu dikonversi ke unit dunia (x = timur, z = selatan).
-import { boxCollider, segCollider, ColliderGrid, contact } from './collision.js';
+import { boxCollider, segCollider, circleCollider, ColliderGrid, contact } from './collision.js';
+import { generateVegetation } from './vegetation.js';
 import { chaikin, ellipsePoints, pointInPolygon, nearestOnPolyline, smoothstep, hash2, distance } from './geometry.js';
 
 export { distance, inRect } from './geometry.js';
 
-const SCALE = 0.25; // unit dunia per piksel sketsa
+const SCALE = 0.35; // unit dunia per piksel sketsa (map 1,4× lebih besar dari versi pertama)
+const K = SCALE / 0.25; // faktor pembesaran untuk landmark yang ikut membesar bersama map
 const ORIGIN = { px: 460, py: 1040 };
 const P = (px, py) => ({ x: (px - ORIGIN.px) * SCALE, z: (py - ORIGIN.py) * SCALE });
 const PP = (list) => list.map(([px, py]) => P(px, py));
@@ -17,7 +19,10 @@ const U = (px) => px * SCALE;
 
 export const MAP_BOUNDS = { minX: P(5, 0).x, maxX: P(915, 0).x, minZ: P(0, 385).z, maxZ: P(0, 1690).z };
 
-const ROAD_WIDTH = { ring: 12, main: 10, ramp: 10, mountain: 9, street: 7, path: 6 };
+// Hierarki jalan: jalan utama & ring road lebar dan cepat, jalan kecil sempit, setapak tanah.
+const ROAD_WIDTH = { ring: 14, main: 14, ramp: 12, mountain: 11, street: 8, path: 5 };
+export const ROAD_SPEED = { ring: 1.15, main: 1.15, ramp: 1, mountain: 1, street: 0.95, path: 0.9 };
+export const OFFROAD_SPEED = 0.75;
 
 // ---------- Wilayah ----------
 const SEA = PP([[5, 385], [690, 385], [640, 410], [560, 432], [430, 455], [330, 470], [220, 472], [120, 482], [60, 512], [5, 570]]);
@@ -35,13 +40,23 @@ const MEADOW = PP([
 ]);
 const GRASS_SOUTH = PP([[5, 1358], [60, 1358], [65, 1520], [200, 1540], [240, 1565], [470, 1580], [520, 1690], [5, 1690]]);
 
+// Pantai pasir di sepanjang garis pantai utara.
+const BEACH = [...COAST, ...COAST.map((p) => ({ x: p.x, z: p.z + 7 * K })).reverse()];
+
+// Ladang di area selatan yang dulu kosong.
+const FIELDS = [
+  PP([[380, 1590], [500, 1590], [500, 1632], [380, 1632]]),
+  PP([[575, 1618], [690, 1618], [690, 1686], [575, 1686]]),
+  PP([[740, 1625], [890, 1625], [890, 1686], [740, 1686]]),
+];
+
 // Zona petir: lereng gunung sepanjang jalan berkelok sampai plant.
 const ZEUS_ZONE = PP([[520, 640], [500, 560], [560, 445], [650, 415], [700, 388], [915, 388], [915, 985], [700, 985], [560, 850]]);
 
 // ---------- Elevasi gunung ----------
 const SUMMIT = P(825, 470);
 const SUMMIT_RADIUS = U(620);
-const SUMMIT_HEIGHT = 16;
+const SUMMIT_HEIGHT = 16 * K;
 // Lereng berundak: teras datar setinggi LEDGE_HEIGHT dengan tebing pendek di antaranya.
 // Jalan gunung memotong undakan dengan tanjakan mulus (dicampur sejauh ROAD_BLEND dari tepi jalan).
 export const TERRAIN = { ledgeHeight: 2.5, ledgeEdge: 0.1, roadBlend: 8 };
@@ -213,7 +228,7 @@ export function createWorld() {
   const dir = { x: (rampEnd.x - gate.x) / rampLen, z: (rampEnd.z - gate.z) / rampLen };
   const rampRot = Math.atan2(dir.z, dir.x);
   for (const side of [1, -1]) {
-    buildings.push({ kind: 'palace', cx: PALACE.x + dir.z * 12 * side, cz: PALACE.z - dir.x * 12 * side, hw: 12, hd: 5, rot: rampRot, height: 9 });
+    buildings.push({ kind: 'palace', cx: PALACE.x + dir.z * 12 * K * side, cz: PALACE.z - dir.x * 12 * K * side, hw: 12 * K, hd: 5 * K, rot: rampRot, height: 11 });
   }
   const hallAngle = (-130 * Math.PI) / 180;
   const hallR = U(133);
@@ -221,8 +236,8 @@ export function createWorld() {
     kind: 'palace',
     cx: PALACE.x + Math.cos(hallAngle) * hallR,
     cz: PALACE.z + Math.sin(hallAngle) * hallR,
-    hw: 17,
-    hd: 3.5,
+    hw: 17 * K,
+    hd: 3.5 * K,
     rot: hallAngle + Math.PI / 2,
     height: 7,
   });
@@ -231,7 +246,7 @@ export function createWorld() {
   buildings.push({ kind: 'hq', cx: hqCenter.x, cz: hqCenter.z, hw: U(110) / 2, hd: U(50) / 2, rot: 0, height: 6 });
 
   const plantCenter = P(825, 472);
-  buildings.push({ kind: 'plant', cx: plantCenter.x, cz: plantCenter.z, hw: 8, hd: 6.5, rot: 0, height: 8 });
+  buildings.push({ kind: 'plant', cx: plantCenter.x, cz: plantCenter.z, hw: 8 * K, hd: 6.5 * K, rot: 0, height: 10 });
 
   const shrineCenter = P(512, 700);
   buildings.push({ kind: 'shrine', cx: shrineCenter.x, cz: shrineCenter.z, hw: 3.5, hd: 3.5, rot: 0, height: 4 });
@@ -272,13 +287,13 @@ export function createWorld() {
   const points = [];
   thinPoints(
     cityLots.map((l) => curbPoint(cityRoads, { x: l.cx, z: l.cz })),
-    14,
+    14 * K,
   )
     .slice(0, CITY_NAMES.length)
     .forEach((p, i) => points.push({ id: `city-${i}`, name: CITY_NAMES[i], district: 'city', ...p }));
   thinPoints(
     houseLots.map((l) => curbPoint(housingRoads, { x: l.cx, z: l.cz })),
-    16,
+    16 * K,
   ).forEach((p, i) => points.push({ id: `house-${i}`, name: `Perumahan Arcadia No. ${i + 1}`, district: 'housing', ...p }));
 
   const hallFront = { x: PALACE.x + Math.cos(hallAngle) * U(160), z: PALACE.z + Math.sin(hallAngle) * U(160) };
@@ -315,13 +330,47 @@ export function createWorld() {
   // Tebing laut: sisi utara gunung langsung jatuh ke laut.
   for (let i = 0; i < 3; i++) colliders.push(segCollider(HILL[i].x, HILL[i].z, HILL[i + 1].x, HILL[i + 1].z, 0.5, { seaCliff: true }));
 
-  const grid = new ColliderGrid(colliders);
-
   const minotaurSpawns = [
     { id: 'west', ...P(80, 1010), territory: rectPx(15, 820, 170, 1250) },
     { id: 'east', ...P(215, 1000), territory: rectPx(128, 880, 280, 1170) },
     { id: 'woodcutter', ...P(480, 990), territory: rectPx(360, 950, 520, 1095) },
   ];
+
+  // Area beraspal (distrik), lalu vegetasi di sisa daratan.
+  const paved = [
+    { cx: CITY.x, cz: CITY.z, rx: U(185) + 9, rz: U(225) + 9 },
+    { cx: HOUSING.x, cz: HOUSING.z, rx: U(150) + 8, rz: U(165) + 8 },
+    { cx: PALACE.x, cz: PALACE.z, rx: PALACE_RING_R + 10, rz: PALACE_RING_R + 10 },
+  ];
+  const buildingGrid = new ColliderGrid(colliders);
+  const vegetation = generateVegetation({
+    bounds: MAP_BOUNDS,
+    roads,
+    isBlocked: (x, z, r) => buildingGrid.query(x, z, r + 1).some((c) => contact(x, z, r, c)),
+    points,
+    extraClear: [zeusPickup, plant.dropoff, hq.spawn],
+    hqZone: { minX: hq.zone.minX - 4, maxX: hq.zone.maxX + 4, minZ: hq.zone.minZ - 4, maxZ: hq.zone.maxZ + 14 },
+    regions: { sea: SEA, hill: HILL, meadow: MEADOW, beach: BEACH, zeusZone: ZEUS_ZONE },
+    paved,
+    fields: FIELDS,
+    territories: minotaurSpawns.map((m) => m.territory),
+    heightAt,
+    summitHeight: SUMMIT_HEIGHT,
+  });
+  for (const v of vegetation) if (v.collide) colliders.push(circleCollider(v.x, v.z, 0.55 * v.s, { tree: v }));
+  const grid = new ColliderGrid(colliders);
+
+  // Kecepatan maksimum relatif menurut permukaan: jalan utama lebih cepat, luar jalan lebih lambat.
+  const speedAt = (x, z) => {
+    let best = OFFROAD_SPEED;
+    for (const r of roads) {
+      if (ROAD_SPEED[r.kind] <= best) continue;
+      if (nearestOnPolyline(r.points, r.closed, x, z).dist <= r.width / 2) best = ROAD_SPEED[r.kind];
+    }
+    // Area beraspal (kota, perumahan, plaza istana) terasa seperti jalan kecil.
+    if (best === OFFROAD_SPEED && paved.some((e) => ((x - e.cx) / e.rx) ** 2 + ((z - e.cz) / e.rz) ** 2 <= 1)) best = ROAD_SPEED.street;
+    return best;
+  };
 
   return {
     bounds: MAP_BOUNDS,
@@ -335,7 +384,11 @@ export function createWorld() {
     grid,
     hillRoads,
     minotaurSpawns,
-    regions: { sea: SEA, hill: HILL, meadow: MEADOW, grassSouth: GRASS_SOUTH, zeusZone: ZEUS_ZONE },
+    regions: { sea: SEA, hill: HILL, meadow: MEADOW, grassSouth: GRASS_SOUTH, zeusZone: ZEUS_ZONE, beach: BEACH },
+    paved,
+    fields: FIELDS,
+    vegetation,
+    speedAt,
     palace: { center: PALACE, ringRadius: PALACE_RING_R, courtRadius: PALACE_COURT_R },
     labels: [
       { text: 'ISTANA ZEUS', ...P(255, 555) },

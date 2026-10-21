@@ -54,7 +54,7 @@ export class Car {
     const prevZ = this.z;
     const prevY = this.y;
     if (this.airborne) this.fly(dt);
-    else this.drive(dt, controls, ground);
+    else this.drive(dt, controls, ground, env.speedAt ? env.speedAt(this.x, this.z) : 1);
 
     const nearby = env.colliders ? env.colliders(this.x, this.z, this.radius + 1) : [];
     const impacts = this.resolveCollisions([...nearby, ...(env.dynamic ?? [])]);
@@ -72,8 +72,10 @@ export class Car {
     this.z += this.vz * dt;
   }
 
-  drive(dt, controls, ground) {
+  // speedFactor: pengali kecepatan maksimum menurut permukaan (jalan utama > jalan kecil > luar jalan).
+  drive(dt, controls, ground, speedFactor = 1) {
     const c = this.cfg;
+    const maxSpeed = c.maxSpeed * speedFactor;
     let fx = Math.sin(this.heading);
     let fz = Math.cos(this.heading);
     let fwd = this.vx * fx + this.vz * fz;
@@ -81,13 +83,13 @@ export class Car {
 
     const throttle = controls.throttle;
     if (throttle > 0) {
-      fwd = fwd < -0.1 ? Math.min(fwd + c.brake * dt, 0) : Math.min(fwd + c.accel * dt * throttle, Math.max(fwd, c.maxSpeed));
+      fwd = fwd < -0.1 ? Math.min(fwd + c.brake * dt, 0) : Math.min(fwd + c.accel * dt * throttle, Math.max(fwd, maxSpeed));
     } else if (throttle < 0) {
       fwd = fwd > 0.1 ? Math.max(fwd - c.brake * dt, 0) : Math.max(fwd - c.reverseAccel * dt, -c.maxReverse);
     } else {
       fwd = approach(fwd, 0, c.coastDrag * dt);
     }
-    if (fwd > c.maxSpeed) fwd = approach(fwd, c.maxSpeed, c.coastDrag * dt);
+    if (fwd > maxSpeed) fwd = approach(fwd, maxSpeed, c.offroadDrag * dt);
 
     // Tanjakan: menanjak melambat, menurun bertambah cepat.
     const slope = (ground(this.x + fx, this.z + fz) - ground(this.x - fx, this.z - fz)) / 2;

@@ -26,6 +26,7 @@ export const CONFIG = {
     reverseAccel: 9,
     brake: 34,
     coastDrag: 5,
+    offroadDrag: 12, // perlambatan saat keluar jalan utama di atas batas kecepatan permukaan
     steerRate: 2.5, // rad/s pada kecepatan penuh
     steerFullSpeed: 7, // di bawah kecepatan ini belokan melemah
     lateralGrip: 7,
@@ -61,7 +62,7 @@ export const CONFIG = {
     guaranteeSpecialAtStart: true, // awal hari selalu ada min. 1 paket curse dan 1 selundupan (bila sudah boleh muncul)
     spawnInterval: 5,
     waitingLifetime: 45,
-    nearRadius: 32, // selalu ada minimal 1 paket dalam radius ini
+    nearRadius: 45, // selalu ada minimal 1 paket dalam radius ini
     nearMinDistance: 8,
     nearCheckInterval: 2,
     minAgeBeforeRetire: 15, // paket Safe boleh dipindahkan ke dekat van setelah menunggu selama ini

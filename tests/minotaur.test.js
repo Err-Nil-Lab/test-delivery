@@ -36,9 +36,12 @@ describe('Minotaur', () => {
     faceOff(game, m);
     const hits = [];
     game.bus.on('minotaur_hit', (h) => hits.push(h));
-    stepFor(game, game.cfg.minotaur.windup + 1);
+    // Jalan step demi step sampai kena, lalu ukur pentalan tepat sesudahnya.
+    for (let i = 0; i < 120 && !hits.length; i++) game.step(1 / 60, { throttle: 0, steer: 0, interact: false });
     expect(hits).toHaveLength(1);
+    game.step(1 / 60, { throttle: 0, steer: 0, interact: false });
     expect(game.car.vz).toBeGreaterThan(5); // terpental searah serudukan
+    stepFor(game, 0.5);
     expect(game.damage.events.some((e) => e.source === 'minotaur')).toBe(true);
     expect(m.state).toBe(MINOTAUR_STATE.DIZZY);
   });
