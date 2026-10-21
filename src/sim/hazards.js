@@ -2,7 +2,8 @@
 // - zone: di zona Zeus, jatuh acak di sekitar van (skill menghindar).
 // - ambient: hiasan di zona Zeus saat van di luar zona.
 // - storm: mulai 20:00, memburu posisi van di seluruh map sampai van di HQ.
-import { inRect, distance } from './world.js';
+import { distance } from './world.js';
+import { polygonBounds } from './geometry.js';
 import { PHASE } from './clock.js';
 
 export class HazardSystem {
@@ -13,6 +14,7 @@ export class HazardSystem {
     this.rng = rng;
     this.bus = bus;
     this.nextId = 1;
+    this.zoneBounds = polygonBounds(world.regions.zeusZone);
     this.reset();
   }
 
@@ -35,8 +37,12 @@ export class HazardSystem {
   }
 
   randomPointInZone() {
-    const z = this.world.zeusZone;
-    return { x: this.rng.range(z.minX, z.maxX), z: this.rng.range(z.minZ, z.maxZ) };
+    const b = this.zoneBounds;
+    for (let i = 0; i < 20; i++) {
+      const p = { x: this.rng.range(b.minX, b.maxX), z: this.rng.range(b.minZ, b.maxZ) };
+      if (this.world.inZeusZone(p.x, p.z)) return p;
+    }
+    return { x: (b.minX + b.maxX) / 2, z: (b.minZ + b.maxZ) / 2 };
   }
 
   // Titik target di sekitar van, sedikit diprediksi ke arah geraknya.
@@ -52,13 +58,13 @@ export class HazardSystem {
   // ctx: { car, phase, stormElapsed, inHQ, blessed }. Mengembalikan sambaran yang mengenai van.
   update(dt, ctx) {
     const { car } = ctx;
-    const inZone = inRect(this.world.zeusZone, car.x, car.z);
+    const inZone = this.world.inZeusZone(car.x, car.z);
 
     this.zoneTimer -= dt;
     if (this.zoneTimer <= 0) {
       if (inZone) {
         const p = this.aimAt(car, this.cfg.zoneLead, this.cfg.telegraph, this.cfg.zoneTargetSpread);
-        if (inRect(this.world.zeusZone, p.x, p.z)) this.spawn('zone', p.x, p.z, this.cfg.telegraph);
+        if (this.world.inZeusZone(p.x, p.z)) this.spawn('zone', p.x, p.z, this.cfg.telegraph);
         this.zoneTimer = this.rng.range(...this.cfg.zoneInterval);
       } else {
         const p = this.randomPointInZone();

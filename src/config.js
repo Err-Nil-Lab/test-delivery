@@ -14,13 +14,13 @@ export const CONFIG = {
     duskHour: 18, // peringatan "Pulang ke HQ!"
     stormHour: 20, // badai Zeus mulai memburu
     limitHour: 24, // TODO(GDD): batas akhir malam → van diderek ke HQ
-    realSecondsPerHour: 8, // 06→18 = 96 s, 18→20 = 16 s
+    realSecondsPerHour: 10, // 06→18 = 120 s (±2 menit per hari), 18→20 = 20 s
     earlyEndConfirmSeconds: 3, // tekan E lagi dalam waktu ini untuk pulang sebelum senja
   },
 
   car: {
     radius: 1.6,
-    maxSpeed: 20,
+    maxSpeed: 22,
     maxReverse: 7,
     accel: 15,
     reverseAccel: 9,
@@ -33,6 +33,9 @@ export const CONFIG = {
     wallBounce: 0.25,
     wallFriction: 0.85,
     spinDamping: 3,
+    gravity: 25, // pengaruh tanjakan: menanjak melambat, menurun bertambah cepat
+    slideGrip: 0.15, // grip lateral saat tergelincir setelah diseruduk
+    slideSeconds: 0.6,
   },
 
   damage: {
@@ -41,6 +44,7 @@ export const CONFIG = {
     collisionCooldown: 0.6,
     lightning: 60, // TODO(GDD): biaya repair per sambaran
     storm: 80,
+    minotaur: 100, // TODO(GDD): biaya repair per serudukan
     towFee: 300, // TODO(GDD): biaya derek saat menyentuh batas malam
     stateThresholds: [150, 400], // total $ untuk state 2 (penyok) dan 3 (rusak berat)
   },
@@ -72,6 +76,22 @@ export const CONFIG = {
     ambientInterval: [0.9, 1.6], // sambaran hiasan saat van di luar zona
     hitSpeedMultiplier: 0.35,
     hitSpin: 4,
+  },
+
+  minotaur: {
+    activeFromDay: 1,
+    radius: 1.8,
+    walkSpeed: 3,
+    detectRadius: 26, // jarak Minotaur melihat van
+    noticeMargin: 4, // van harus berada di padang (+ margin ini) untuk dikejar
+    aimLead: 0.35, // detik prediksi posisi van saat membidik
+    windup: 0.9, // detik ancang-ancang (telegraph) sebelum menyeruduk
+    chargeSpeed: 30,
+    chargeDistance: 40,
+    knockback: 26, // kecepatan tambahan pada van saat kena
+    knockSpin: 3,
+    dizzy: 2.5,
+    cooldown: 2,
   },
 
   storm: {

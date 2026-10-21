@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createWorld } from '../src/sim/world.js';
 import { newGame, stepFor, teleport, PRESS_E } from './helpers.js';
 
-const ZONE_POINT = { x: 40, z: -40 }; // persimpangan di dalam zona Zeus
-const CITY_POINT = { x: -40, z: 0 }; // persimpangan di luar zona
+const world = createWorld();
+const ZONE_POINT = world.ref.serpentineTop; // jalan gunung di dalam zona Zeus
+const CITY_POINT = world.ref.cityRoad; // jalan utama di luar zona
 
 function strikeOnCar(game, kind = 'zone') {
   const s = game.hazards.spawn(kind, game.car.x, game.car.z, 0.1);
@@ -11,6 +13,11 @@ function strikeOnCar(game, kind = 'zone') {
 }
 
 describe('Petir dan badai', () => {
+  it('titik acuan berada di dalam / di luar zona', () => {
+    expect(world.inZeusZone(ZONE_POINT.x, ZONE_POINT.z)).toBe(true);
+    expect(world.inZeusZone(CITY_POINT.x, CITY_POINT.z)).toBe(false);
+  });
+
   it('petir di zona Zeus memberi damage bila van tidak membawa blessing', () => {
     const game = newGame();
     teleport(game, ZONE_POINT);

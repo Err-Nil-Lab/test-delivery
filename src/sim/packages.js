@@ -22,7 +22,7 @@ export class PackageSystem {
     this.scripted = scripted;
     if (!spawnInitial) return;
     if (scripted) {
-      const zeus = this.makePackage('zeus', this.world.scriptedZeusPoint);
+      const zeus = this.makePackage('zeus', this.world.zeusPickup);
       zeus.lifetime = Infinity;
       this.waiting.push(zeus);
       this.zeusSpawnedToday += 1;
@@ -97,12 +97,12 @@ export class PackageSystem {
     return !active && this.zeusSpawnedToday < this.cfg.zeus.maxPerDay;
   }
 
+  // Paket Zeus selalu diambil di Gerbang Istana Zeus; paket Safe di titik acak.
   spawnRandom({ allowZeus }) {
+    if (allowZeus && this.canSpawnZeus() && this.rng.chance(this.cfg.zeus.chance)) return this.spawnAt('zeus', this.world.zeusPickup);
     const candidates = this.freePoints();
     if (!candidates.length) return null;
-    const point = this.rng.pick(candidates);
-    const type = allowZeus && this.canSpawnZeus() && this.rng.chance(this.cfg.zeus.chance) ? 'zeus' : 'safe';
-    return this.spawnAt(type, point);
+    return this.spawnAt('safe', this.rng.pick(candidates));
   }
 
   spawnNear(car) {

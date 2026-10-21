@@ -28,6 +28,7 @@ const TRACKED = new Set([
   'blessing_lost',
   'phase',
   'strike_hit',
+  'minotaur_hit',
   'collision',
   'early_end_requested',
   'day_end',

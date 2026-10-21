@@ -25,8 +25,8 @@ describe('DayClock', () => {
 
   it('satu hari sampai senja ±2 menit nyata', () => {
     const { duskHour, stormHour, startHour, realSecondsPerHour } = CONFIG.time;
-    expect((duskHour - startHour) * realSecondsPerHour).toBe(96);
-    expect((stormHour - startHour) * realSecondsPerHour).toBe(112);
+    expect((duskHour - startHour) * realSecondsPerHour).toBe(120);
+    expect((stormHour - startHour) * realSecondsPerHour).toBe(140);
   });
 
   it('stormElapsed hanya berjalan setelah 20:00', () => {

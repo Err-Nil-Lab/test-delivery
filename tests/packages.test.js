@@ -3,13 +3,23 @@ import { distance } from '../src/sim/world.js';
 import { newGame, stepFor, teleport, IDLE, PRESS_E, testConfig } from './helpers.js';
 
 describe('Paket dan cargo', () => {
-  it('Day 1 run pertama: paket Zeus dijamin ada di seberang HQ', () => {
+  it('Day 1 run pertama: paket Zeus dijamin menunggu di Gerbang Istana Zeus', () => {
     const game = newGame();
     const zeus = game.packages.waiting.find((p) => p.type === 'zeus');
     expect(zeus).toBeDefined();
-    expect(zeus.pickup).toBe(game.world.scriptedZeusPoint);
+    expect(zeus.pickup).toBe(game.world.zeusPickup);
     expect(zeus.dest).toBe(game.world.plant.dropoff);
-    expect(distance(zeus.pickup, game.world.hq.spawn)).toBeLessThan(25);
+  });
+
+  it('paket Zeus selalu diambil di Gerbang Istana Zeus', () => {
+    const config = testConfig();
+    config.packages.zeus.chance = 1;
+    const game = newGame({ seed: 9, config });
+    game.endDay();
+    game.run.lastReport.pass = true;
+    game.advance();
+    const zeus = game.packages.waiting.find((p) => p.type === 'zeus');
+    expect(zeus.pickup).toBe(game.world.zeusPickup);
   });
 
   it('harus berhenti dulu untuk mengambil paket', () => {
@@ -73,7 +83,7 @@ describe('Paket dan cargo', () => {
   });
 
   it('paket Zeus paling banyak muncul sekali per hari', () => {
-    const config = testConfig({ packages: {} });
+    const config = testConfig();
     config.packages.zeus.chance = 1;
     const game = newGame({ seed: 5, config });
     let zeusSpawns = 0;

@@ -3,10 +3,8 @@ import { Game } from '../src/sim/game.js';
 import { RUN_STATE } from '../src/sim/run.js';
 import { newGame, stepFor, teleport, IDLE, PRESS_E, testConfig } from './helpers.js';
 
-const OUTSIDE_HQ = { x: -60, z: 40 };
-
 function returnToHQ(game) {
-  teleport(game, OUTSIDE_HQ);
+  teleport(game, game.world.ref.outsideHQ);
   game.step(1 / 60, IDLE);
   teleport(game, game.world.hq.spawn, Math.PI);
 }
@@ -58,7 +56,7 @@ describe('Alur run', () => {
 
   it('tidak pulang sampai 24:00 → diderek, biaya derek masuk laporan', () => {
     const game = newGame();
-    teleport(game, OUTSIDE_HQ);
+    teleport(game, game.world.ref.outsideHQ);
     game.god = true;
     game.clock.setHour(23.9);
     stepFor(game, 2);
@@ -95,7 +93,8 @@ describe('Alur run', () => {
     expect(game.run.day).toBe(1);
     expect(game.run.runCount).toBe(2);
     expect(game.run.scripted).toBe(false);
-    expect(game.packages.waiting.some((p) => p.pickup === game.world.scriptedZeusPoint && p.type === 'zeus')).toBe(false);
+    // Paket Zeus tutorial (tidak pernah kedaluwarsa) hanya ada di Day 1 run pertama.
+    expect(game.packages.waiting.some((p) => p.type === 'zeus' && p.lifetime === Infinity)).toBe(false);
   });
 
   it('lolos 7 hari → menang', () => {
@@ -112,8 +111,9 @@ describe('Alur run', () => {
 
   it('tabrakan keras menambah damage, dan damage tidak terlihat sampai laporan', () => {
     const game = newGame();
-    // Van melaju ke utara menabrak gedung Apotek Asclepius.
-    teleport(game, { x: -60, z: 40 }, Math.PI);
+    // Van melaju ke utara menabrak sebuah gedung kota dari sisi selatannya.
+    const b = game.world.buildings.find((q) => q.kind === 'city');
+    teleport(game, { x: b.cx, z: b.cz + b.hd + 3 }, Math.PI);
     game.car.vz = -18;
     stepFor(game, 1);
     expect(game.damage.events.some((e) => e.source === 'collision')).toBe(true);

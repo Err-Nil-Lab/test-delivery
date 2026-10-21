@@ -8,6 +8,7 @@ import { DayClock, PHASE } from './clock.js';
 import { DamageLedger } from './damage.js';
 import { PackageSystem } from './packages.js';
 import { HazardSystem } from './hazards.js';
+import { MinotaurSystem } from './minotaurs.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -24,6 +25,7 @@ export class Game {
     this.damage = new DamageLedger(config.damage);
     this.packages = new PackageSystem(this.world, config.packages, this.rng, this.bus);
     this.hazards = new HazardSystem(this.world, config.lightning, config.storm, this.rng, this.bus);
+    this.minotaurs = new MinotaurSystem(this.world, config.minotaur, this.rng, this.bus);
     this.run = new RunState(config.run);
     this.telemetry = new Telemetry(this.bus, () => ({
       run: this.run.runCount,
@@ -46,7 +48,7 @@ export class Game {
   }
 
   get inZeusZone() {
-    return inRect(this.world.zeusZone, this.car.x, this.car.z);
+    return this.world.inZeusZone(this.car.x, this.car.z);
   }
 
   get earlyEndPending() {
@@ -72,6 +74,7 @@ export class Game {
     this.clock.reset();
     this.damage.reset();
     this.hazards.reset();
+    this.minotaurs.reset();
     this.packages.resetDay({ scripted: run.scripted, near: this.car });
     this.collisionCooldown = 0;
     this.earlyEndUntil = -Infinity;
@@ -81,7 +84,8 @@ export class Game {
 
     if (run.scripted) {
       this.hint('W/S: gas & rem · A/D: belok');
-      this.hint('Paket ⚡ Zeus menunggu di seberang jalan. Berhenti di penandanya, lalu tekan E.', 4);
+      this.hint('Paket ⚡ Zeus menunggu di Gerbang Istana Zeus. Ikuti panah ⚡ ke utara, berhenti di penanda, lalu tekan E.', 4);
+      this.hint('Hati-hati: Minotaur di padang menyeruduk van yang lewat. Lihat arah ancang-ancangnya, lalu menghindar!', 12);
     } else if (run.runCount === 1 && run.day === 2) {
       this.hint('Paket kini muncul acak di seluruh kota. Van punya 3 slot; paket Zeus memakan 2.');
     }
@@ -92,14 +96,20 @@ export class Game {
     this.runSeconds += dt;
     const hour = this.clock.hour;
 
-    const impacts = this.car.update(dt, controls, this.world.colliders);
+    const impacts = this.car.update(dt, controls, {
+      heightAt: this.world.heightAt,
+      colliders: this.world.nearbyColliders,
+      hillOverflow: this.world.hillOverflow,
+      dynamic: this.minotaurs.colliders(),
+    });
     this.collisionCooldown -= dt;
-    for (const impact of impacts) {
-      if (impact < this.cfg.damage.collisionMinImpact || this.collisionCooldown > 0) continue;
+    for (const { speed, collider } of impacts) {
+      if (collider.minotaur) this.minotaurs.provoke(collider.minotaur, this.car);
+      if (speed < this.cfg.damage.collisionMinImpact || this.collisionCooldown > 0) continue;
       this.collisionCooldown = this.cfg.damage.collisionCooldown;
-      const cost = this.god ? 0 : impact * this.cfg.damage.collisionCostPerSpeed;
+      const cost = this.god ? 0 : speed * this.cfg.damage.collisionCostPerSpeed;
       this.damage.add('collision', cost, hour);
-      this.bus.emit('collision', { impact: round2(impact), cost: Math.round(cost) });
+      this.bus.emit('collision', { impact: round2(speed), cost: Math.round(cost) });
     }
 
     if (!this.inHQ) this.leftHQ = true;
@@ -129,6 +139,14 @@ export class Game {
       this.bus.emit('strike_hit', { kind: hit.kind, blocked: false, cost });
     }
 
+    const mcfg = this.cfg.minotaur;
+    const rams = this.minotaurs.update(dt, { car: this.car, active: this.run.day >= mcfg.activeFromDay });
+    for (const ram of rams) {
+      const side = this.rng.chance(0.5) ? 1 : -1;
+      this.car.applyImpulse(ram.dirX * mcfg.knockback, ram.dirZ * mcfg.knockback, side * mcfg.knockSpin);
+      this.damage.add('minotaur', this.god ? 0 : this.cfg.damage.minotaur, hour);
+    }
+
     while (this.pendingHints.length && this.pendingHints[0].at <= this.clock.elapsed) {
       this.bus.emit('hint', { text: this.pendingHints.shift().text });
     }
@@ -143,10 +161,10 @@ export class Game {
     const result = this.packages.interact(this.car, hour);
     if (result) {
       if (result.kind === 'pickup' && result.pkg.type === 'zeus' && this.run.scripted) {
-        this.hint('Selama membawa paket Zeus kamu kebal petir. Antar ke Electrical Plant (ikuti panah ⚡).');
+        this.hint('Selama membawa paket Zeus kamu kebal petir. Antar ke Electrical Plant di puncak gunung (ikuti panah ⚡).');
       }
       if (result.kind === 'deliver' && result.packages.some((p) => p.type === 'zeus') && this.run.scripted) {
-        this.hint('Petir kini bisa mengenaimu. Keluar dari zona Zeus!', 2.5);
+        this.hint('Petir kini bisa mengenaimu. Turuni gunung dengan hati-hati!', 2.5);
       }
       this.bus.emit('interact', result);
       return result;
