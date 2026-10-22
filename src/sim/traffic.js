@@ -24,26 +24,29 @@ export class TrafficSystem {
   }
 
   // Sebar mobil di semua lajur. Mobil tidak muncul terlalu dekat dengan van.
-  reset(van) {
+  // density: pengali kepadatan hari ini (titah dewa), minRivals: jumlah minimum van saingan.
+  reset(van, { density = 1, minRivals = 1 } = {}) {
     const c = this.cfg;
     this.cars = [];
     if (!c.enabled) return;
     const slots = [];
     for (const lane of this.lanes) {
-      const exact = (lane.path.length / 100) * (c.carsPer100m[lane.road.kind] ?? 0);
+      const exact = (lane.path.length / 100) * (c.carsPer100m[lane.road.kind] ?? 0) * density;
       const count = Math.floor(exact) + (this.rng.chance(exact % 1) ? 1 : 0);
       for (let i = 0; i < count; i++) slots.push({ lane, s: ((i + this.rng.range(0.1, 0.6)) / count) * lane.path.length });
     }
     // Kalau melebihi batas, buang secara acak (deterministik dari seed).
-    while (slots.length > c.maxCars) slots.splice(Math.floor(this.rng.next() * slots.length), 1);
+    while (slots.length > c.maxCars * density) slots.splice(Math.floor(this.rng.next() * slots.length), 1);
     for (const slot of slots) {
       const p = samplePath(slot.lane.path, slot.s);
       if (Math.hypot(p.x - van.x, p.z - van.z) < 14) continue;
       this.cars.push(this.makeCar(this.cars.length, slot.lane, slot.s));
     }
-    // Selalu ada minimal satu van saingan Iris Express yang berkeliaran.
-    const sedan = this.cars.find((car) => car.kind === 'sedan' && car.lane.road.kind !== 'mountain');
-    if (sedan && !this.cars.some((car) => car.kind === 'rival')) Object.assign(sedan, this.makeCar(sedan.id, sedan.lane, sedan.s, 'rival'));
+    // Selalu ada beberapa van saingan Iris Express yang berkeliaran.
+    for (const sedan of this.cars.filter((car) => car.kind === 'sedan' && car.lane.road.kind !== 'mountain')) {
+      if (this.cars.filter((car) => car.kind === 'rival').length >= minRivals) break;
+      Object.assign(sedan, this.makeCar(sedan.id, sedan.lane, sedan.s, 'rival'));
+    }
     for (const car of this.cars) {
       this.place(car);
       car.heading = Math.atan2(car.dirX, car.dirZ);

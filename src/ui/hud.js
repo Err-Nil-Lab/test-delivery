@@ -2,6 +2,7 @@
 import { formatHour, PHASE } from '../sim/clock.js';
 import { Minimap } from './minimap.js';
 import { CURSES, packageLook } from '../sim/curses.js';
+import { DAY_MODS, UPGRADES } from '../sim/upgrades.js';
 
 const PHASE_ICONS = { [PHASE.DAY]: '☀', [PHASE.DUSK]: '🌇', [PHASE.STORM]: '⛈', [PHASE.LIMIT]: '⛈' };
 
@@ -22,6 +23,7 @@ export class Hud {
     this.dayEl = el('div', 'hud-day', left);
     this.clockEl = el('div', 'hud-clock', left);
     this.moneyEl = el('div', 'hud-money', left);
+    this.modEl = el('div', 'hud-mod', left);
 
     const right = el('div', 'hud-panel hud-right', this.root);
     el('div', 'hud-caption', right).textContent = 'Cargo';
@@ -29,6 +31,7 @@ export class Hud {
     this.blessingEl = el('div', 'hud-blessing', right);
     this.blessingEl.textContent = '⚡ Blessing Zeus · kebal petir';
     this.cursesEl = el('div', 'hud-curses', right);
+    this.upgradesEl = el('div', 'hud-upgrades', right);
 
     this.promptEl = el('div', 'hud-prompt', this.root);
     this.bannerEl = el('div', 'hud-banner', this.root);
@@ -48,7 +51,13 @@ export class Hud {
     this.lastText = new Map();
 
     const { bus } = game;
-    bus.on('day_start', ({ quota }) => this.banner(`DAY ${game.run.day} / ${game.cfg.run.days}`, `Quota hari ini $${quota}`, 'day', 2.5));
+    bus.on('day_start', ({ quota, modifier }) => {
+      const m = modifier ? DAY_MODS[modifier] : null;
+      this.banner(`DAY ${game.run.day} / ${game.cfg.run.days}`, `Quota hari ini $${quota}${m ? `<br><b>${m.icon} Titah hari ini: ${m.name}</b> · ${m.desc}` : ''}`, 'day', m ? 4.5 : 2.5);
+    });
+    bus.on('package_stolen', ({ pay }) => this.toast(`🟣 Iris Express mencuri paket $${pay}! Senggol vannya supaya paketnya jatuh`, 'loss', 3));
+    bus.on('package_dropped', () => this.toast('📦 Paket curian jatuh! Ambil sebelum hilang', 'money', 2.5));
+    bus.on('strike_hit', ({ rod }) => rod && this.toast('⚡ Penangkal petir menahan sambaran!', 'zeus', 2));
     bus.on('phase', ({ phase }) => {
       if (phase === PHASE.DUSK) this.banner('SENJA', 'Pulang ke HQ!', 'dusk', 3);
       if (phase === PHASE.STORM) this.banner('BADAI ZEUS MEMBURU', 'Pulang ke HQ sekarang!', 'storm', 3);
@@ -262,6 +271,15 @@ export class Hud {
     this.clockEl.dataset.phase = clock.phase;
     this.setHtml(this.moneyEl, `Hari ini <b>$${packages.income + game.style.tips}</b> · Quota <b>$${run.quota}</b>`);
     this.updateCombo();
+    const mod = game.dayMods.id ? DAY_MODS[game.dayMods.id] : null;
+    this.setHtml(this.modEl, mod ? `${mod.icon} ${mod.name}` : '');
+    this.modEl.title = mod ? mod.desc : '';
+    this.setHtml(
+      this.upgradesEl,
+      run.upgrades
+        .map((id) => `<span title="${UPGRADES[id].name}: ${UPGRADES[id].desc}">${UPGRADES[id].icon}${id === 'rod' ? `<small>${game.rodCharges}</small>` : ''}</span>`)
+        .join(''),
+    );
 
     const slots = [];
     for (const p of packages.cargo) {

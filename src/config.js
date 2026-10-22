@@ -71,6 +71,7 @@ export const CONFIG = {
     landingSafeSpeed: 7, // kecepatan jatuh yang masih aman saat mendarat
     landingCostPerSpeed: 10, // TODO(GDD): $ per unit kecepatan jatuh di atas batas aman
     towFee: 300, // TODO(GDD): biaya derek saat menyentuh batas malam
+    lightningRodCharges: 0, // upgrade Penangkal Petir: sambaran yang ditahan per hari
     stateThresholds: [150, 400], // total $ untuk state 2 (penyok) dan 3 (rusak berat)
   },
 
@@ -88,6 +89,7 @@ export const CONFIG = {
     pickupRadius: 4.5,
     dropoffRadius: 5,
     minTripDistance: 40,
+    payMultiplier: 1, // pengali semua bayaran (titah dewa harian)
     undeliveredPenalty: 0.1, // TODO(GDD): −10% dari bayaran tiap paket yang masih dibawa di akhir hari
     safe: { slots: 1, basePay: 40, payPerUnit: 0.7, maxPay: 200 },
     zeus: { slots: 2, pay: 400, chance: 0.3, maxPerDay: 1 },
@@ -109,6 +111,7 @@ export const CONFIG = {
   // Kena damage saat combo berjalan = combo hangus.
   style: {
     enabled: true,
+    tipMultiplier: 1, // upgrade Sandal Bersayap
     comboWindow: 3,
     multStep: 0.5,
     maxMult: 3,
@@ -224,7 +227,27 @@ export const CONFIG = {
     // Menghindar "selalu berhasil": dipicu saat van diperkirakan sampai dalam waktu ini.
     dodge: { radius: 10, lane: 2.8, timeToHit: 0.9, speed: 7.5, seconds: 0.45, sitSeconds: 1.1, minVanSpeed: 5 },
     birds: { enabled: true, pigeons: 12, gulls: 8, scareRadius: 9 },
+    // Iris Express: van saingan yang mengincar paket menunggu. Senggol saat membawa curian = paket jatuh.
+    rival: {
+      enabled: true,
+      minRivals: 2,
+      warnRadius: 35, // paket diberi peringatan saat van saingan mendekat dari jarak ini
+      stealRadius: 6,
+      minAge: 6, // paket yang baru muncul tidak langsung dicuri
+      playerGuard: 12, // paket tidak dicuri kalau van pemain sedekat ini
+      stealChance: 0.6,
+      maxLoot: 3,
+      dropImpact: 5, // kecepatan tumbukan minimal untuk membuat paket curian jatuh
+      dropLifetime: 30,
+      stealable: ['safe', 'fragile', 'express'],
+    },
     soundRadius: 45, // suara NPC di luar jarak ini tidak dimainkan
+  },
+
+  // Bengkel Hephaestus & titah dewa harian. Kas = profit di atas quota yang terkumpul selama run.
+  meta: {
+    shopOffers: 3, // jumlah upgrade yang ditawarkan tiap selesai hari
+    modifiersFromDay: 2, // titah dewa harian mulai hari ini
   },
 
   // "Zeus LIVE": reaksi Zeus di pojok layar (ejek saat badai, marah saat masuk wilayahnya). ?zeus=0 mematikan.

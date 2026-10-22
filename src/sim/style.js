@@ -56,7 +56,7 @@ export class StyleSystem {
 
   bank() {
     if (!this.combo) return 0;
-    const tip = Math.round(this.combo.total * this.multiplier);
+    const tip = Math.round(this.combo.total * this.multiplier * (this.cfg.tipMultiplier ?? 1));
     this.tips += tip;
     this.bus.emit('style_banked', { tip, count: this.combo.tricks.length, mult: this.multiplier });
     this.combo = null;

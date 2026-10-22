@@ -78,9 +78,11 @@ export class CrowdSystem {
     return this.all.filter((a) => a.state !== S.HIDDEN);
   }
 
-  reset() {
+  // mult: pengali jumlah pejalan kaki hari ini (titah dewa).
+  reset({ mult = 1 } = {}) {
     this.people = [];
     this.animals = [];
+    this.peopleMult = mult;
     if (this.cfg.pedestrians.enabled) this.spawnPeople();
     if (this.cfg.animals.enabled) this.spawnAnimals();
   }
@@ -91,7 +93,7 @@ export class CrowdSystem {
       const pieces = this.sidewalks.filter((p) => p.district === district);
       const total = pieces.reduce((a, p) => a + p.path.length, 0);
       if (!total) continue;
-      for (let i = 0; i < (pc[district] ?? 0); i++) {
+      for (let i = 0; i < Math.round((pc[district] ?? 0) * (this.peopleMult ?? 1)); i++) {
         let r = this.rng.next() * total;
         const piece = pieces.find((p) => (r -= p.path.length) <= 0) ?? pieces[0];
         const person = {

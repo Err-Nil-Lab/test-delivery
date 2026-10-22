@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from 'vitest';
 import { ZeusCam } from '../src/ui/zeusCam.js';
-import { newGame, stepFor } from './helpers.js';
+import { newGame, teleport } from './helpers.js';
 
 // DOM tiruan minimal: cukup untuk ZeusCam (class, dataset, atribut, teks).
 function fakeElement() {
@@ -63,7 +63,7 @@ describe('Zeus LIVE', () => {
 
   it('badai: teriak BALIK, lalu terus mengejek selama van belum di HQ', () => {
     const { game, cam, spoken, tick } = setup();
-    game.car.reset(game.world.ref.cityRoad);
+    teleport(game, game.world.ref.cityRoad);
     game.clock.setHour(19.99);
     tick(1);
     expect(spoken.at(-1).mood).toBe('furious');
@@ -76,10 +76,10 @@ describe('Zeus LIVE', () => {
 
   it('van sampai di HQ saat badai: Zeus kesal lalu kamera mati', () => {
     const { game, cam, spoken, tick } = setup();
-    game.car.reset(game.world.ref.cityRoad);
+    teleport(game, game.world.ref.cityRoad);
     game.clock.setHour(20.05);
     tick(6);
-    game.car.reset(game.world.hq.spawn);
+    teleport(game, game.world.hq.spawn);
     tick(1);
     expect(spoken.at(-1).mood).toBe('annoyed');
     tick(6);
@@ -88,7 +88,7 @@ describe('Zeus LIVE', () => {
 
   it('kalimat penting tidak dipotong reaksi kecil', () => {
     const { game, cam, spoken, tick } = setup();
-    game.car.reset(game.world.ref.cityRoad);
+    teleport(game, game.world.ref.cityRoad);
     game.clock.setHour(19.99);
     tick(0.5);
     const before = spoken.length;

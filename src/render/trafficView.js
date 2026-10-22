@@ -21,6 +21,7 @@ const COL = {
   dark: C('#2b2b2b'),
   wheel: C('#1f1f22'),
   lamp: C('#fff4cc'),
+  crate: C('#b98b55'),
 };
 const charred = new THREE.Color('#2a2522');
 const tmp = new THREE.Color();
@@ -102,6 +103,8 @@ export class TrafficView {
       baseMatrix(base, car.x, world.heightAt(car.x, car.z) + hop, car.z, car.heading, 0, roll);
       const burnt = Math.min(1, car.zap);
       parts(car, (size, at, color, tilt) => this.bodies.add(base, size, at, burnt > 0 ? tmp.copy(color).lerp(charred, burnt * 0.85) : color, tilt));
+      // Paket curian Iris menumpuk di atap: senggol supaya jatuh!
+      (car.loot ?? []).forEach((_, i) => this.bodies.add(base, [0.9, 0.7, 0.9], [0, 2.45 + i * 0.72, 0.6 - i * 0.5], COL.crate));
       if (car.kind !== 'chariot' && car.kind !== 'goatcart') {
         for (const sx of [-1, 1]) this.lamps.add(base, [0.45, 0.3, 0.1], [(sx * car.width) / 3, 0.85, car.length / 2 + 0.03], COL.lamp);
         if (night > 0.05 && beams < 60) {

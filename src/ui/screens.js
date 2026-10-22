@@ -2,6 +2,7 @@
 import { formatHour } from '../sim/clock.js';
 import { DAMAGE_LABELS } from '../sim/damage.js';
 import { SETTINGS_FIELDS } from './settings.js';
+import { UPGRADES, DAY_MODS } from '../sim/upgrades.js';
 
 const money = (v) => (v < 0 ? `−$${Math.abs(v)}` : `$${v}`);
 
@@ -74,12 +75,13 @@ export class Screens {
     const verdict = report.pass
       ? `<div class="verdict pass">LOLOS QUOTA<small>${run.isFinalDay ? 'Hari terakhir selesai!' : 'Para dewa mengangguk… sedikit.'}</small></div>`
       : `<div class="verdict fail">GAGAL QUOTA<small>Para dewa kecewa. Hermes tetap manusia biasa.</small></div>`;
-    const next = !report.pass ? 'Ulang dari Day 1' : run.isFinalDay ? 'Lihat hasil' : `Lanjut ke Day ${run.day + 1}`;
-    const shop = report.pass && !run.isFinalDay ? '<p class="muted shop">Toko upgrade: belum ada di graybox ini.</p>' : '';
+    const next = !report.pass ? 'Ulang dari Day 1' : run.isFinalDay ? 'Lihat hasil' : '🔨 Ke Bengkel Hephaestus';
+    const mod = run.modifier ? DAY_MODS[run.modifier] : null;
+    const kas = report.pass ? `<p class="kas">🔨 Kas bengkel <b>+${money(report.savingsGain)}</b> → ${money(run.savings)}</p>` : '';
 
     this.show(
       'report',
-      `<p class="eyebrow">Laporan akhir hari · pulang ${formatHour(report.endHour)}${report.towed ? ' (diderek)' : ''}</p>
+      `<p class="eyebrow">Laporan akhir hari · pulang ${formatHour(report.endHour)}${report.towed ? ' (diderek)' : ''}${mod ? ` · ${mod.icon} ${mod.name}` : ''}</p>
       <h2>Day ${report.day}</h2>
       <table class="report-table">
         <tr><td>Income (${report.deliveredCount} paket)</td><td data-count="${report.income}">${money(report.income)}</td></tr>
@@ -93,7 +95,7 @@ export class Screens {
       <details ${report.damageEvents.length ? 'open' : ''}><summary>Rincian damage</summary><ul class="damage-list">${damageRows}</ul></details>
       ${verdict}
       <p class="muted">Dompet: ${money(run.wallet)}</p>
-      ${shop}
+      ${kas}
       <button data-action="continue" data-primary>${next} (Enter)</button>`,
       { continue: onContinue },
     );
@@ -125,6 +127,38 @@ export class Screens {
       <button data-action="download" class="secondary">Unduh log playtest</button>`,
       { restart: onRestart, download: onDownload },
     );
+  }
+
+  // Bengkel Hephaestus: beli upgrade dengan Kas (profit di atas quota). Berlaku sampai run berakhir.
+  showShop(game, { onDone }) {
+    const run = game.run;
+    const offers = game.shopOffers();
+    const cards = offers
+      .map((id) => {
+        const u = UPGRADES[id];
+        const owned = run.upgrades.includes(id);
+        const afford = run.savings >= u.price;
+        const btn = owned ? '<button disabled>Terpasang ✓</button>' : `<button data-buy="${id}" ${afford ? '' : 'disabled'}>Beli ${money(u.price)}</button>`;
+        return `<div class="upgrade ${owned ? 'owned' : ''}"><div class="icon">${u.icon}</div><b>${u.name}</b><p>${u.desc}</p>${btn}</div>`;
+      })
+      .join('');
+    const owned = run.upgrades.length ? `<p class="muted">Terpasang: ${run.upgrades.map((id) => `${UPGRADES[id].icon} ${UPGRADES[id].name}`).join(' · ')}</p>` : '';
+    this.show(
+      'shop',
+      `<p class="eyebrow">Sebelum Day ${run.day + 1}</p>
+      <h2>🔨 Bengkel Hephaestus</h2>
+      <p class="lead">"Van tuamu menyedihkan. Bayar, dan aku tempa sesuatu." — Hephaestus</p>
+      <p class="kas">Kas bengkel: <b>${money(run.savings)}</b></p>
+      <div class="upgrades">${offers.length ? cards : '<p class="muted">Semua upgrade sudah terpasang!</p>'}</div>
+      ${owned}
+      <button data-action="done" data-primary>Mulai Day ${run.day + 1} (Enter)</button>`,
+      { done: onDone },
+    );
+    for (const b of this.overlay.querySelectorAll('[data-buy]')) {
+      b.addEventListener('click', () => {
+        if (game.buyUpgrade(b.dataset.buy)) this.showShop(game, { onDone });
+      });
+    }
   }
 
   showPause({ onResume, onRestart, onDownload, onSettings }) {

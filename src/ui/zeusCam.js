@@ -17,6 +17,8 @@ const LINES = {
   safe: { mood: 'annoyed', lines: ['Huh. Lolos kali ini…', 'Besok aku lebih cepat.', 'Hmph. Beruntung saja.'] },
   landing: { mood: 'laugh', lines: ['Mendarat yang indah. HAHA', 'Sepuluh dari sepuluh! 🤣'] },
   ram: { mood: 'laugh', lines: ['Sapi-sapiku menyapamu!', 'MOOO! HAHAHA'] },
+  stolen: { mood: 'laugh', lines: ['HAHA! Iris lebih cepat darimu!', 'Paketmu diambil saingan! 😂', 'Kalah cepat sama Iris. Memalukan~'] },
+  dropped: { mood: 'smirk', lines: ['Senggolan yang bagus. Hmph.', 'Wah, kau bisa juga nakal 😏', 'Iris pasti kesal. HEHE'] },
   midnight: { mood: 'furious', lines: ['TENGAH MALAM SEBENTAR LAGI!', 'Mau diderek? HAHAHA'] },
 };
 
@@ -119,6 +121,10 @@ export class ZeusCam {
     on('blessing_lost', () => this.say('zeusDelivered', 2));
     on('hard_landing', () => storm() && this.react('landing'));
     on('minotaur_hit', () => storm() && this.react('ram'));
+    on('package_stolen', () => this.say('stolen', 2));
+    on('package_dropped', () => this.say('dropped', 2));
+    // Titah dewa harian diumumkan Zeus sendiri.
+    on('day_modifier', ({ icon, zeus }) => this.sayText('smirk', `${icon} ${zeus}`, 3, 4.5));
   }
 
   setMood(mood) {
@@ -135,11 +141,15 @@ export class ZeusCam {
   }
 
   say(key, priority = 1, hold = this.cfg.holdSeconds) {
+    const { mood, lines } = LINES[key];
+    this.sayText(mood, pick(lines), priority, hold);
+  }
+
+  sayText(mood, text, priority = 1, hold = this.cfg.holdSeconds) {
     if (!this.enabled || this.game.run.state !== 'day') return;
     // Kalimat penting tidak dipotong kalimat yang kurang penting.
     if (this.hold > 0 && priority < this.priority) return;
-    const { mood, lines } = LINES[key];
-    this.text = pick(lines);
+    this.text = text;
     this.shown = 0;
     this.hold = hold;
     this.priority = priority;

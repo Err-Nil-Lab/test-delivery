@@ -40,6 +40,21 @@ export const SFX = {
   },
   late: (c, o) => [0, 0.18].forEach((d) => tone(c, o, { freq: 520, freqEnd: 380, type: 'square', dur: 0.15, gain: 0.07, delay: d })),
 
+  // ---------- Saingan & bengkel ----------
+  stolen: (c, o) => {
+    noise(c, o, { dur: 0.3, gain: 0.12, filter: 'bandpass', freq: 600, freqEnd: 2500, q: 2 });
+    [0, 0.12, 0.24].forEach((d, i) => tone(c, o, { freq: 700 - i * 120, type: 'square', dur: 0.08, gain: 0.06, delay: d + 0.15 })); // "na-na-na"
+  },
+  dropped: (c, o) => {
+    tone(c, o, { freq: 300, freqEnd: 600, type: 'triangle', dur: 0.15, gain: 0.12 });
+    noise(c, o, { dur: 0.12, gain: 0.12, filter: 'lowpass', freq: 700, delay: 0.1 });
+  },
+  anvil: (c, o) => {
+    [880, 1320, 2210].forEach((f, i) => tone(c, o, { freq: f, type: 'sine', dur: 0.9 / (i + 1), gain: 0.12 / (i + 1) }));
+    noise(c, o, { dur: 0.06, gain: 0.2, filter: 'highpass', freq: 3000 });
+  },
+  rodBlock: (c, o) => [0, 0.06].forEach((d) => tone(c, o, { freq: 1500, freqEnd: 400, type: 'sawtooth', dur: 0.2, gain: 0.06, delay: d })),
+
   // ---------- Zeus LIVE ----------
   // Gumaman "bahasa dewa": suku kata pendek bernada rendah; tertawa = "HA HA HA" turun; marah = ada guntur.
   zeusTalk: (c, o, { mood = 'smirk', syllables = 7 } = {}) => {
@@ -205,6 +220,10 @@ export const EVENT_SFX = {
   fragile_cracked: () => ({ name: 'crack' }),
   fragile_broken: () => ({ name: 'shatter' }),
   express_late: () => ({ name: 'late' }),
+  package_stolen: (e, game) => near(e, game, { name: 'stolen' }) ?? { name: 'stolen', opts: { vol: 0.35 } },
+  package_dropped: () => ({ name: 'dropped' }),
+  upgrade_bought: () => ({ name: 'anvil' }),
+  strike_hit: ({ rod }) => (rod ? { name: 'rodBlock' } : null),
   npc_honk: (e, game) => near(e, game, { name: 'honk', opts: { rival: e.kind === 'rival' } }),
   npc_bumped: (e, game) => near(e, game, { name: 'angryHonk' }),
   npc_dodge: (e, game) => near(e, game, { name: { person: 'scream', sheep: 'baa', goat: 'baa', chicken: 'cluck' }[e.kind] ?? 'scream' }),

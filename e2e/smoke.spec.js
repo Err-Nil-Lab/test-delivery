@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('core loop: intro → setir → Zeus → blessing hilang → senja → badai → laporan → Day 2', async ({ page }) => {
+test('core loop: intro → setir → Zeus → blessing hilang → senja → badai → laporan → bengkel → Day 2', async ({ page }) => {
   const state = () => page.evaluate(() => window.__hex.state());
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -60,8 +60,13 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
   await expect(page.locator('.report-table')).toContainText('$400');
   await expect(page.locator('.verdict')).toContainText('LOLOS');
 
+  // Lolos → Bengkel Hephaestus (Kas = profit di atas quota), lalu Day 2 dengan titah dewa.
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.screen.shop')).toBeVisible();
+  await expect(page.locator('.upgrade')).toHaveCount(3);
   await page.keyboard.press('Enter');
   await expect(page.locator('.hud-day')).toContainText('DAY 2');
+  await expect(page.locator('.hud-mod')).not.toBeEmpty();
   expect(errors).toEqual([]);
 });
 
