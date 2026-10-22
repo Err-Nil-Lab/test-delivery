@@ -198,6 +198,15 @@ export const CONFIG = {
     soundRadius: 45, // suara NPC di luar jarak ini tidak dimainkan
   },
 
+  // "Zeus LIVE": reaksi Zeus di pojok layar (ejek saat badai, marah saat masuk wilayahnya). ?zeus=0 mematikan.
+  zeusCam: {
+    enabled: true,
+    holdSeconds: 3.2, // lama kalimat tetap terlihat setelah selesai diketik
+    tauntEvery: [4, 7], // detik antar ejekan selama badai
+    cooldown: 3, // jeda minimal antar reaksi kecil (petir meleset, mendarat, dll.)
+    nearMissRadius: 7,
+  },
+
   // Suara (semua sintesis WebAudio). Mute dengan tombol M.
   audio: {
     enabled: true,

@@ -52,6 +52,7 @@ URL bisa diberi parameter:
 |---|---|
 | `?seed=123` | Run deterministik: spawn paket dan petir sama persis setiap kali |
 | `?debug=1` | Panel debug langsung terbuka (bisa juga dibuka dengan tombol <kbd>`</kbd>) |
+| `?zeus=0` | Matikan reaksi "Zeus LIVE" di pojok layar |
 | `?npc=0` | Map tanpa penghuni (tanpa lalu lintas, pejalan kaki, hewan, burung) |
 | `?drift=0` | Drift/handbrake mati (setir normal). `?drift=1` menyalakannya |
 
@@ -67,6 +68,25 @@ URL bisa diberi parameter:
 | <kbd>Esc</kbd> | Pause (ada tombol unduh log playtest) |
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
+
+## Zeus LIVE
+
+Di pojok kiri atas ada kamera reaksi **Zeus LIVE**. Wajah kartun Zeus berganti ekspresi (menyeringai, marah, murka, tertawa, kesal), dengan gelembung kata yang diketik dan suara gumaman "bahasa dewa".
+
+| Momen | Reaksi Zeus |
+|---|---|
+| Senja | Menyindir: "Jam 8 nanti aku turun tangan. Siap-siap ya~" |
+| **Badai mulai (20:00)** | Murka dan layar bergetar: **"BALIK! BALIK! BALIK KE HQ!"** |
+| Selama badai | Kamera terus siaran dan mengejek tiap 4–7 detik, tergantung jarak van ke HQ: jauh "Lari, kurir, LARI!", sedang "Aku melihatmu… 👁️", dekat "JANGAN BERANI-BERANI MASUK HQ!" |
+| Petir meleset / kena / ditahan blessing | "HAMPIR!" / "KENA! HAHAHAHA" / "Cih. Paketku melindungimu." |
+| Masuk wilayah petir di siang hari | "Gunungku bukan jalan pintas!" |
+| Ambil / antar paket Zeus | "Bawa paketku baik-baik." / "Sekarang kau tak terlindung lagi… 😈" |
+| Sampai HQ saat badai | Kesal "Huh. Lolos kali ini…", lalu kamera mati |
+| Menjelang tengah malam | "TENGAH MALAM SEBENTAR LAGI!" |
+
+- **Prioritas kalimat:** kalimat penting (mis. "BALIK!") tidak dipotong reaksi kecil, dan reaksi kecil punya jeda supaya Zeus tidak cerewet.
+- **Pengaturan:** semua angka ada di `zeusCam` di config. Bisa dimatikan dengan `?zeus=0` atau lewat panel debug.
+- **`?calm=1`** mematikan getarnya.
 
 ## Penghuni map
 
@@ -220,7 +240,7 @@ src/
   render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur, NPC & burung,
                    juice (shake/hitstop/zoom), particle pool, teks melayang, efek per event
   audio/           WebAudio: synth, resep SFX, mesin van, musik prosedural
-  ui/              HUD, minimap, layar intro/laporan/menang/pause, panel debug
+  ui/              HUD, minimap, Zeus LIVE (reaksi Zeus), layar intro/laporan/menang/pause, panel debug
 tests/             unit test (Vitest)
 e2e/               smoke test di browser (Playwright)
 ```
