@@ -242,7 +242,8 @@ export class PackageSystem {
       if (!dest) return null;
       pay = round5(Math.min(v.maxPay, this.safePay(pickup, dest) * v.payMultiplier));
       slots = this.cfg.safe.slots;
-      const pkg = { ...this.basePackage(type, pickup, dest, pay, slots), basePay: pay };
+      const pkg = this.basePackage(type, pickup, dest, pay, slots);
+      pkg.basePay = pkg.pay;
       if (type === 'fragile') pkg.condition = 1;
       else pkg.timeLimit = Math.round(v.baseSeconds + v.secondsPerUnit * distance(pickup, dest));
       return pkg;
@@ -256,6 +257,8 @@ export class PackageSystem {
   }
 
   basePackage(type, pickup, dest, pay, slots) {
+    // Pengali bayaran harian (titah dewa), kecuali paket Zeus yang bayarannya tetap.
+    if (type !== 'zeus') pay = round5(pay * (this.cfg.payMultiplier ?? 1));
     return { id: this.nextId++, type, curse: null, slots, pay, pickup, dest, age: 0, lifetime: this.cfg.waitingLifetime };
   }
 

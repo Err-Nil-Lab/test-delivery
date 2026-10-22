@@ -80,6 +80,7 @@ export class MarkersView {
     const label = tag(`<b>${icon}$${pkg.pay}</b>${curse}<small>→ ${pkg.dest.name}${slots}</small>`, pkg.type);
     if (pkg.type === 'curse' || pkg.type === 'fragile' || pkg.type === 'express') label.element.style.background = color;
     if (pkg.type === 'smuggle') label.element.innerHTML = `<b>${icon}$${pkg.pay}</b><small class="scam">scam ${Math.round(pkg.scamChance * 100)}%</small><small>→ ${pkg.dest.name}</small>`;
+    label.element.insertAdjacentHTML('beforeend', '<small class="threat">🟣 Iris Express mengincar!</small>');
     label.position.y = special ? 6 : 4.5;
     group.add(label);
 
@@ -126,6 +127,7 @@ export class MarkersView {
       const remaining = pkg.lifetime - pkg.age;
       view.group.visible = remaining > 8 || Math.sin(this.time * 14) > -0.3;
       view.label.visible = view.group.visible;
+      view.label.element.classList.toggle('threatened', Boolean(pkg.threat));
     }
   }
 }

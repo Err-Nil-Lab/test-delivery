@@ -20,7 +20,7 @@ export class DamageLedger {
 
   add(source, cost, hour) {
     const rounded = Math.round(cost);
-    if (rounded <= 0) return null;
+    if (!(rounded > 0)) return null; // nol, negatif, atau NaN: tidak dicatat
     const event = { source, cost: rounded, hour };
     this.events.push(event);
     return event;

@@ -45,6 +45,10 @@ export class RunState {
     this.state = RUN_STATE.INTRO;
     this.day = 1;
     this.wallet = 0;
+    this.savings = 0;
+    this.upgrades = [];
+    this.offers = [];
+    this.modifier = null;
     this.lastReport = null;
     this.history = [];
   }
@@ -66,6 +70,10 @@ export class RunState {
     this.runCount += 1;
     this.day = 1;
     this.wallet = 0;
+    this.savings = 0; // Kas bengkel: profit di atas quota, untuk membeli upgrade
+    this.upgrades = [];
+    this.offers = [];
+    this.modifier = null;
     this.lastReport = null;
     this.history = [];
     this.state = RUN_STATE.INTRO;
@@ -77,6 +85,8 @@ export class RunState {
 
   endDay(report) {
     this.wallet += report.profit;
+    report.savingsGain = report.pass ? report.profit - report.quota : 0;
+    this.savings += report.savingsGain;
     this.lastReport = report;
     this.history.push(report);
     this.state = RUN_STATE.REPORT;

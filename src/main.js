@@ -90,14 +90,22 @@ function showPauseMenu() {
 }
 
 game.bus.on('day_end', () => {
+  const advance = () => {
+    const outcome = game.advance();
+    if (outcome === 'win') {
+      screens.showWin(game.run, { onRestart: restartRun, onDownload: downloadLog });
+    } else {
+      screens.hide();
+    }
+  };
   screens.showReport(game.run.lastReport, game.run, {
     onContinue: () => {
-      const outcome = game.advance();
-      if (outcome === 'win') {
-        screens.showWin(game.run, { onRestart: restartRun, onDownload: downloadLog });
-      } else {
-        screens.hide();
+      // Lolos dan masih ada hari berikutnya: mampir ke Bengkel Hephaestus dulu.
+      if (game.run.lastReport.pass && !game.run.isFinalDay) {
+        screens.showShop(game, { onDone: advance });
+        return;
       }
+      advance();
     },
   });
 });

@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { CURSES } from '../sim/curses.js';
 
 const BODY_COLORS = { 1: '#f2f2ee', 2: '#c9c2b0', 3: '#8d7660' };
-const SLOT_Z = [1.15, 0, -1.15];
+// Posisi peti di atap per slot (dihitung dari kapasitas cargo: 3 slot standar, 4 dengan Rak Atap).
+const slotZ = (capacity) => Array.from({ length: capacity }, (_, i) => 1.3 - (i * 2.6) / Math.max(1, capacity - 1));
 
 function part(geometry, material, x, y, z) {
   const mesh = new THREE.Mesh(geometry, material);
@@ -73,7 +74,8 @@ export class CarView {
     });
   }
 
-  rebuildCargo(cargo) {
+  rebuildCargo(cargo, capacity = 3) {
+    const SLOT_Z = slotZ(capacity);
     for (const crate of this.cargo.children) crate.geometry.dispose();
     this.cargo.clear();
     let slot = 0;
@@ -110,7 +112,7 @@ export class CarView {
     const key = packages.cargo.map((p) => p.id).join(',');
     if (key !== this.cargoKey) {
       this.cargoKey = key;
-      this.rebuildCargo(packages.cargo);
+      this.rebuildCargo(packages.cargo, game.cfg.packages.capacity);
     }
 
     // Damage: warna, kemiringan, lalu asap dan percikan yang terus bertambah.

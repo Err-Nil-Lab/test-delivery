@@ -925,7 +925,7 @@ body.desaturate #app canvas {
 /* ---------- Zeus LIVE: reaksi Zeus di pojok kiri atas ---------- */
 .zeus-cam {
   position: absolute;
-  top: 116px;
+  top: 140px; /* di bawah panel jam (yang bisa memuat baris titah dewa) */
   left: 16px;
   z-index: 3;
   display: flex;
@@ -1180,4 +1180,101 @@ body.desaturate #app canvas {
 .setting input[type='range'] {
   width: 160px;
   accent-color: var(--green);
+}
+
+/* ---------- Titah dewa, upgrade, saingan ---------- */
+.hud-mod {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #e9d5ff;
+}
+
+.hud-mod:empty,
+.hud-upgrades:empty {
+  display: none;
+}
+
+.hud-upgrades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 16px;
+}
+
+.hud-upgrades small {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--zeus);
+  vertical-align: super;
+}
+
+.tag .threat {
+  display: none;
+}
+
+.tag.threatened .threat {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #7c3aed;
+  color: #fff !important;
+  font-weight: 800;
+  animation: urgent 0.5s steps(2) infinite;
+}
+
+.kas {
+  font-size: 16px;
+  color: #fde68a;
+}
+
+.screen.shop .card {
+  max-width: 760px;
+}
+
+.upgrades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.upgrade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+}
+
+.upgrade .icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.upgrade p {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.upgrade button {
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.upgrade button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.upgrade.owned {
+  border-color: var(--green);
 }

@@ -70,6 +70,48 @@ URL bisa diberi parameter:
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
 
+## Bengkel Hephaestus, titah dewa harian, Iris Express
+
+**Bengkel Hephaestus** (upgrade roguelike, [`src/sim/upgrades.js`](src/sim/upgrades.js)):
+- **Kas bengkel:** profit di atas quota tiap hari yang lolos masuk ke sini (tertulis di laporan).
+- **Tawaran:** setelah laporan, Bengkel menawarkan **3 upgrade acak** yang belum dimiliki.
+- **Masa berlaku:** upgrade yang dibeli bertahan sampai run berakhir. Gagal quota = ulang dari Day 1 tanpa upgrade.
+- **Di HUD:** ikon upgrade tampil di panel cargo. Penangkal Petir juga menunjukkan sisa jatahnya.
+
+| Upgrade | Efek | Harga |
+|---|---|---|
+| 🛞 Ban Grip Hermes | Turbo drift lebih cepat terisi (−30% waktu drift) | $110 |
+| 🔥 Mesin Tempaan Hephaestus | Kecepatan maks +10%, akselerasi +20% | $180 |
+| ⚡ Penangkal Petir | Menahan 1 sambaran per hari | $150 |
+| 📦 Rak Atap | Cargo 3 → 4 slot | $200 |
+| 🛡️ Bumper Empuk | Biaya tabrakan & pendaratan −40%, paket rapuh retak lebih pelan | $130 |
+| 📯 Klakson Penjinak Minotaur | Minotaur lebih lambat sadar, ancang-ancang lebih lama | $100 |
+| 🪽 Sandal Bersayap Bekas | Tip bonus gaya ×1,5 | $160 |
+| 🦉 Kompas Athena | Batas waktu paket Kilat +30% | $90 |
+| 📜 Polis Asuransi Iris | Tanpa biaya derek & denda paket belum diantar | $120 |
+
+**Titah dewa harian** (mulai Day 2, satu per hari, tidak sama dengan kemarin):
+- Diumumkan di banner pagi dan oleh Zeus LIVE, lalu tetap tampil di panel jam.
+- Efeknya hanya berlaku satu hari: tiap pagi config kembali ke aslinya, lalu upgrade dan titah hari itu diterapkan ulang.
+
+| Titah | Efek |
+|---|---|
+| 🍷 Festival Dionysus | Lalu lintas & pejalan kaki jauh lebih ramai, paket terkutuk 2× lebih sering |
+| 🪽 Hermes Cuti | Semua bayaran +20% |
+| 🌊 Poseidon Ngambek | Jalanan licin (grip ban −45%), ada cipratan air |
+| ⚡ Zeus Pemarah | Badai jam 19:00, tapi bayaran +25% |
+| ⚔️ Ares Ngamuk | Minotaur beringas, tip OLÉ! ×3 |
+| ⏳ Chronos Terburu-buru | Hari 25% lebih cepat, bayaran +30% |
+| 🌾 Panen Demeter | Banyak paket rapuh, bayarannya +30% |
+| ⏱️ Hari Kilat | Paket kilat di mana-mana, bayarannya +30% |
+
+**Iris Express jadi saingan** ([`src/sim/rival.js`](src/sim/rival.js)):
+- Minimal 2 van ungu Iris Express berkeliaran di jalan.
+- **Peringatan dulu:** paket menunggu yang didekati Iris diberi label berkedip **"🟣 Iris Express mengincar!"**, jadi kamu bisa merebutnya duluan.
+- **Mencuri:** kalau Iris lewat dekat paket itu, paketnya dicuri. Paket yang baru muncul atau sedang kamu dekati aman.
+- **Merebut kembali:** paket curian menumpuk di atap van Iris. **Senggol vannya** dan satu paket jatuh di jalan untuk diambil ("PAKETNYA JATUH!"). Menyenggol tetap dihitung tabrakan biasa (ada biaya repair).
+- Semua angkanya ada di `npc.rival` di config.
+
 ## GPS, bonus gaya, paket Rapuh & Kilat, Pengaturan
 
 **GPS** (<kbd>G</kbd>):
@@ -268,6 +310,8 @@ src/
     car.js         driving arcade, handbrake/drift + mini-turbo, tanjakan, collision, impuls
     navigation.js  GPS: graf jalan + A*, pemilihan tujuan aktif
     style.js       bonus gaya: aksi berani → combo → tip
+    upgrades.js    Bengkel Hephaestus (upgrade) + titah dewa harian
+    rival.js       Iris Express: mengincar, mencuri, menjatuhkan paket
     lanes.js       lajur mobil (loop per jalan) dan trotoar untuk NPC
     traffic.js     lalu lintas NPC: ikut lajur, mengerem, menyalip, terpental saat ditabrak
     crowd.js       pejalan kaki & hewan: berjalan, menyeberang, menghindar, kabur, pulang saat badai

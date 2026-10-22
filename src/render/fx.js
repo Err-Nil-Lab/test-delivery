@@ -75,6 +75,17 @@ export class EventFx {
       const c = at();
       this.popups.spawn('COMBO HANGUS', c.x, c.y + 4.5, c.z, 'loss', 1);
     });
+    on('package_stolen', (e) => {
+      if (!near(e)) return;
+      const y = groundY(e);
+      this.popups.spawn('DICURI IRIS! 😜', e.x, y + 4, e.z, 'angry', 1.2);
+      this.particles.burst(12, { x: e.x, y: y + 1.5, z: e.z, speed: 4, up: 4, life: 0.6, size: 0.35, color: '#a78bfa', gravity: 10 });
+    });
+    on('package_dropped', (e) => {
+      const y = groundY(e);
+      this.popups.spawn('PAKETNYA JATUH!', e.x, y + 4, e.z, 'tip', 1.2);
+      this.particles.burst(14, { x: e.x, y: y + 2, z: e.z, speed: 4, up: 6, life: 0.7, size: 0.35, color: '#c9b79a', gravity: 14 });
+    });
     on('fragile_cracked', () => {
       const c = at();
       this.popups.spawn('KRAK!', c.x, c.y + 3.8, c.z, 'warn', 0.8);
@@ -236,6 +247,10 @@ export class EventFx {
         this.particles.emit({ x: w.x, y: w.y + 0.3, z: w.z, vx: (Math.random() - 0.5) * 1.5, vy: 0.9, vz: (Math.random() - 0.5) * 1.5, life: 0.7, size: car.drifting ? 0.7 : 0.5, grow: 1.8, color: smoke, drag: 2 });
         if (tier >= 0) this.particles.emit({ x: w.x, y: w.y + 0.25, z: w.z, vx: (Math.random() - 0.5) * 6, vy: 2 + Math.random() * 2, vz: (Math.random() - 0.5) * 6, life: 0.25, size: 0.18, color: TIER_COLORS[tier], gravity: 12 });
       }
+    }
+    // Jalan licin (Poseidon ngambek): cipratan air di belakang ban.
+    if (game.dayMods?.wet && !car.airborne && car.speed > 8 && Math.random() < 0.6) {
+      for (const w of rear) this.particles.emit({ x: w.x, y: w.y + 0.2, z: w.z, vx: (Math.random() - 0.5) * 3, vy: 2 + Math.random() * 2, vz: (Math.random() - 0.5) * 3, life: 0.45, size: 0.3, color: '#a5d8ff', gravity: 12 });
     }
     // Turbo: api kecil dari knalpot.
     if (car.boostTime > 0 && Math.random() < 0.7) {

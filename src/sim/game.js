@@ -13,6 +13,8 @@ import { TrafficSystem } from './traffic.js';
 import { CrowdSystem } from './crowd.js';
 import { StyleSystem } from './style.js';
 import { Navigator } from './navigation.js';
+import { RivalSystem } from './rival.js';
+import { UPGRADES, DAY_MODS, MUTABLE_SECTIONS, restoreInPlace } from './upgrades.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -20,6 +22,10 @@ const round2 = (v) => Math.round(v * 100) / 100;
 export class Game {
   constructor({ config = CONFIG, seed = 1 } = {}) {
     this.cfg = config;
+    // Salinan asli bagian config yang diubah upgrade & titah dewa; dikembalikan tiap pagi.
+    this.baseCfg = Object.fromEntries(MUTABLE_SECTIONS.map((k) => [k, structuredClone(config[k])]));
+    this.dayMods = {};
+    this.rodCharges = 0;
     this.seed = seed;
     this.bus = new EventBus();
     this.rng = createRng(seed);
@@ -32,6 +38,9 @@ export class Game {
     this.minotaurs = new MinotaurSystem(this.world, config.minotaur, this.rng, this.bus, config.curse.effects);
     // NPC memakai RNG sendiri supaya urutan paket & petir per seed tidak berubah.
     const npcRng = createRng((seed ^ 0x9e3779b9) >>> 0);
+    // Undian bengkel & titah dewa juga punya RNG sendiri.
+    this.metaRng = createRng((seed ^ 0x51ed270b) >>> 0);
+    this.rival = new RivalSystem(config.npc.rival, npcRng, this.bus);
     this.traffic = new TrafficSystem(this.world, config.npc.traffic, npcRng, this.bus);
     this.crowd = new CrowdSystem(this.world, config.npc, npcRng, this.bus);
     this.npcEnabled = config.npc.enabled;
@@ -84,6 +93,7 @@ export class Game {
   beginDay() {
     const { run } = this;
     run.beginDay();
+    this.applyDayConfig();
     this.car.reset(this.world.hq.spawn);
     this.clock.reset();
     this.damage.reset();
@@ -91,13 +101,18 @@ export class Game {
     this.minotaurs.reset();
     this.resetNpcs();
     this.style.reset();
+    this.rival.reset();
     this.packages.resetDay({ scripted: run.scripted, day: run.day, near: this.car });
     this.steerHistory = [];
     this.collisionCooldown = 0;
     this.earlyEndUntil = -Infinity;
     this.pendingHints = [];
     this.leftHQ = false;
-    this.bus.emit('day_start', { quota: run.quota, scripted: run.scripted });
+    this.bus.emit('day_start', { quota: run.quota, scripted: run.scripted, modifier: run.modifier });
+    if (run.modifier) {
+      const m = DAY_MODS[run.modifier];
+      this.bus.emit('day_modifier', { id: run.modifier, icon: m.icon, name: m.name, desc: m.desc, zeus: m.zeus });
+    }
 
     if (run.scripted) {
       this.hint(this.car.driftEnabled ? 'W/S: gas & rem · A/D: belok · Space: ngepot (drift) · H: drift on/off' : 'W/S: gas & rem · A/D: belok');
@@ -108,10 +123,50 @@ export class Game {
     }
   }
 
+  // Pagi hari: config kembali ke aslinya, lalu upgrade yang dimiliki dan titah dewa hari ini diterapkan.
+  applyDayConfig() {
+    for (const k of MUTABLE_SECTIONS) restoreInPlace(this.cfg[k], this.baseCfg[k]);
+    for (const id of this.run.upgrades) UPGRADES[id].apply(this.cfg);
+    this.dayMods = {};
+    const run = this.run;
+    run.modifier = null;
+    if (!run.scripted && run.day >= this.cfg.meta.modifiersFromDay) {
+      const ids = Object.keys(DAY_MODS).filter((id) => id !== run.lastModifier);
+      run.modifier = ids[Math.floor(this.metaRng.next() * ids.length)];
+      run.lastModifier = run.modifier;
+      DAY_MODS[run.modifier].apply(this.cfg, this.dayMods);
+      this.dayMods.id = run.modifier;
+    }
+    this.rodCharges = this.cfg.damage.lightningRodCharges ?? 0;
+  }
+
+  // Bengkel Hephaestus: tawaran upgrade setelah hari yang lolos (diundi sekali per hari).
+  shopOffers() {
+    const run = this.run;
+    if (run.offersDay !== run.day) {
+      const pool = Object.keys(UPGRADES).filter((id) => !run.upgrades.includes(id));
+      const offers = [];
+      while (pool.length && offers.length < this.cfg.meta.shopOffers) offers.push(pool.splice(Math.floor(this.metaRng.next() * pool.length), 1)[0]);
+      run.offers = offers;
+      run.offersDay = run.day;
+    }
+    return run.offers;
+  }
+
+  buyUpgrade(id) {
+    const run = this.run;
+    const up = UPGRADES[id];
+    if (!up || !run.offers.includes(id) || run.upgrades.includes(id) || run.savings < up.price) return false;
+    run.savings -= up.price;
+    run.upgrades.push(id);
+    this.bus.emit('upgrade_bought', { id, price: up.price, savings: run.savings });
+    return true;
+  }
+
   resetNpcs() {
     if (this.npcEnabled) {
-      this.traffic.reset(this.car);
-      this.crowd.reset();
+      this.traffic.reset(this.car, { density: this.dayMods.trafficMult ?? 1, minRivals: this.cfg.npc.rival.enabled ? this.cfg.npc.rival.minRivals : 0 });
+      this.crowd.reset({ mult: this.dayMods.crowdMult ?? 1 });
     } else {
       this.traffic.cars = [];
       this.crowd.people = [];
@@ -165,7 +220,10 @@ export class Game {
         continue;
       }
       if (collider.minotaur) this.minotaurs.provoke(collider.minotaur, this.car);
-      if (collider.npcCar) this.traffic.bump(collider.npcCar, this.car, speed);
+      if (collider.npcCar) {
+        this.traffic.bump(collider.npcCar, this.car, speed);
+        if (collider.npcCar.kind === 'rival') this.rival.onBumped(collider.npcCar, speed, this.packages, hour);
+      }
       if (speed < this.cfg.damage.collisionMinImpact || this.collisionCooldown > 0) continue;
       this.collisionCooldown = this.cfg.damage.collisionCooldown;
       const cost = this.god ? 0 : speed * this.cfg.damage.collisionCostPerSpeed;
@@ -194,6 +252,12 @@ export class Game {
         continue;
       }
       if (this.inHQ) continue; // HQ selalu aman
+      // Upgrade Penangkal Petir menahan sambaran (jatah per hari).
+      if (this.rodCharges > 0) {
+        this.rodCharges -= 1;
+        this.bus.emit('strike_hit', { kind: hit.kind, blocked: true, rod: true });
+        continue;
+      }
       this.car.applyHit(this.cfg.lightning.hitSpeedMultiplier, (this.rng.chance(0.5) ? 1 : -1) * this.cfg.lightning.hitSpin);
       const source = hit.kind === 'storm' ? 'storm' : 'lightning';
       const cost = this.god ? 0 : this.cfg.damage[source];
@@ -224,6 +288,7 @@ export class Game {
     if (this.npcEnabled) {
       this.traffic.update(dt, { van: this.car, phase: this.clock.phase, walkers: this.crowd.walkers(), scare: (a, c) => this.crowd.scare(a, c) });
       this.crowd.update(dt, { van: this.car, phase: this.clock.phase });
+      this.rival.update(dt, { traffic: this.traffic, packages: this.packages, van: this.car, hour });
     }
     this.style.update(dt, { car: this.car, npcCars: this.traffic.cars });
     this.nav.update(dt, this);
