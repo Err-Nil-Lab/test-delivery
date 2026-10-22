@@ -10,6 +10,9 @@ import { ParticlePool } from './particles.js';
 import { Popups } from './popups.js';
 import { Juice } from './juice.js';
 import { EventFx } from './fx.js';
+import { TrafficView } from './trafficView.js';
+import { CrowdView } from './crowdView.js';
+import { Birds } from './birds.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
@@ -89,6 +92,9 @@ export class View {
     this.markersView = new MarkersView(this.scene, game);
     this.hazardView = new HazardView(this.scene, game.bus, game.world.heightAt);
     this.minotaurView = new MinotaurView(this.scene, game, this.particles);
+    this.trafficView = new TrafficView(this.scene, game);
+    this.crowdView = new CrowdView(this.scene, game);
+    this.birds = new Birds(this.scene, game, game.cfg.npc.birds);
     this.fx = new EventFx({ game, particles: this.particles, popups: this.popups, juice: this.juice, carView: this.carView });
 
     this.target = new THREE.Vector3(game.car.x, 0, game.car.z);
@@ -163,6 +169,9 @@ export class View {
     this.markersView.update(dt, this.game);
     this.hazardView.update(dt, this.game);
     this.minotaurView.update(dt, this.game);
+    this.trafficView.update(dt, night);
+    this.crowdView.update(dt);
+    this.birds.update(dt);
     this.fx.update(dt);
     this.particles.update(dt);
     this.popups.update(dt);

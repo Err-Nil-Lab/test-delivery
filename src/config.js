@@ -154,6 +154,50 @@ export const CONFIG = {
     cooldown: 2,
   },
 
+  // Penghuni map: lalu lintas, pejalan kaki, hewan, burung. ?npc=0 di URL mematikan semuanya.
+  npc: {
+    enabled: true,
+    traffic: {
+      enabled: true,
+      carsPer100m: { ring: 0.5, main: 0.6, street: 0.35, mountain: 0.2 }, // per 100 m panjang loop lajur
+      maxCars: 34,
+      speed: { ring: 13, main: 13, street: 8, mountain: 7 },
+      accel: 6,
+      brake: 16,
+      lookAhead: 11, // jarak pandang ke depan untuk mengerem
+      minGap: 2.5, // jarak berhenti dari halangan
+      turnSlowAngle: 0.7, // tikungan setajam ini (rad dalam 8 m ke depan) membuat mobil melambat
+      turnSpeed: 5,
+      honkWait: 0.7, // detik menunggu sebelum klakson
+      overtakeWait: 1.4, // detik menunggu van yang parkir sebelum menyalip
+      ghostAfter: 2, // detik menunggu mobil lain di simpang sebelum nekat jalan
+      bumpMinImpact: 2,
+      bumpImpulse: 0.7, // pengali kecepatan tumbukan van → dorongan mobil NPC
+      bumpSpin: 4,
+      spunSeconds: 1.5,
+      rejoinSeconds: 1,
+      stormKeep: 0.25, // porsi mobil yang tetap jalan saat badai (sisanya pulang)
+      kinds: {
+        sedan: { length: 3.8, width: 1.9, speed: 1, weight: 6 },
+        chariot: { length: 4.4, width: 1.6, speed: 0.6, weight: 1.5 },
+        truck: { length: 5.6, width: 2.2, speed: 0.75, weight: 1.5 },
+        rival: { length: 4, width: 2.1, speed: 1.3, weight: 0.8 }, // van saingan "Iris Express"
+        goatcart: { length: 3, width: 1.5, speed: 0.7, weight: 0 }, // hanya di jalan gunung
+      },
+    },
+    pedestrians: { enabled: true, city: 26, housing: 16, palace: 8, walkSpeed: [1.1, 1.7], crossChance: 0.02, idleChance: 0.06 },
+    animals: {
+      enabled: true,
+      sheep: { flocks: 2, perFlock: 8, speed: 1.2, fleeSpeed: 5.5, fleeRadius: 11, area: 13 },
+      chicken: { flocks: 2, perFlock: 5, speed: 1.6, fleeSpeed: 6, fleeRadius: 7, area: 10 },
+      goat: { flocks: 2, perFlock: 3, speed: 1, fleeSpeed: 5, fleeRadius: 9, area: 9 },
+    },
+    // Menghindar "selalu berhasil": dipicu saat van diperkirakan sampai dalam waktu ini.
+    dodge: { radius: 10, lane: 2.8, timeToHit: 0.9, speed: 7.5, seconds: 0.45, sitSeconds: 1.1, minVanSpeed: 5 },
+    birds: { enabled: true, pigeons: 12, gulls: 8, scareRadius: 9 },
+    soundRadius: 45, // suara NPC di luar jarak ini tidak dimainkan
+  },
+
   // Suara (semua sintesis WebAudio). Mute dengan tombol M.
   audio: {
     enabled: true,

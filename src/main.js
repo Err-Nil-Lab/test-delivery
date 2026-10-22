@@ -35,6 +35,11 @@ const storedDrift = (() => {
 })();
 if (params.has('drift')) game.car.driftEnabled = params.get('drift') !== '0';
 else if (storedDrift !== null) game.car.driftEnabled = storedDrift === '1';
+if (params.get('npc') === '0') game.setNpcEnabled(false);
+view.birds.onScare = (b) => {
+  const d = Math.hypot(b.x - game.car.x, b.z - game.car.z);
+  audio.play('flap', { vol: Math.max(0.2, 1 - d / 30) });
+};
 const hud = new Hud(app, game, view);
 const screens = new Screens(app);
 createDebugPanel(game, { visible: params.has('debug'), audio });

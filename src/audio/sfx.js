@@ -26,6 +26,45 @@ export const SFX = {
     noise(c, o, { dur: 0.5, gain: 0.18, filter: 'bandpass', freq: 500, freqEnd: 3000, q: 1.5 }); // whoosh
     arpeggio(c, o, (tier ? [64, 69, 73, 76] : [69, 76]).map((n) => midi(n)), { type: 'square', dur: 0.08, gain: 0.07, step: 0.045 });
   },
+  // ---------- Penghuni map ----------
+  honk: (c, o, { rival = false } = {}) => {
+    const f = rival ? 660 : 420;
+    for (const d of [0, rival ? 0.14 : 0.17]) {
+      tone(c, o, { freq: f, type: 'square', dur: rival ? 0.09 : 0.13, gain: 0.07, delay: d });
+      tone(c, o, { freq: f * 1.26, type: 'square', dur: rival ? 0.09 : 0.13, gain: 0.05, delay: d });
+    }
+    if (rival) tone(c, o, { freq: f * 1.5, type: 'square', dur: 0.09, gain: 0.06, delay: 0.28 });
+  },
+  angryHonk: (c, o) => {
+    tone(c, o, { freq: 380, type: 'square', dur: 0.7, attack: 0.01, gain: 0.08 });
+    tone(c, o, { freq: 479, type: 'square', dur: 0.7, attack: 0.01, gain: 0.06 });
+  },
+  scream: (c, o) => tone(c, o, { freq: 900 + Math.random() * 300, freqEnd: 420, type: 'triangle', dur: 0.45, attack: 0.02, gain: 0.09, detune: 30 }),
+  baa: (c, o) => {
+    const t = c.currentTime;
+    const osc = c.createOscillator();
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    const g = c.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 280 + Math.random() * 60;
+    lfo.frequency.value = 24;
+    lfoGain.gain.value = 18;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    const f = c.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 1400;
+    osc.connect(f).connect(g).connect(o);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + 0.6);
+    lfo.stop(t + 0.6);
+  },
+  cluck: (c, o) => [0, 0.09, 0.2].forEach((d) => tone(c, o, { freq: 1100, freqEnd: 600, type: 'square', dur: 0.04, gain: 0.05, delay: d })),
+  flap: (c, o) => [0, 0.07, 0.15, 0.24].forEach((d) => noise(c, o, { dur: 0.06, gain: 0.08, filter: 'bandpass', freq: 900, q: 1.5, delay: d })),
   takeoff: (c, o) => noise(c, o, { dur: 0.35, gain: 0.1, filter: 'bandpass', freq: 400, freqEnd: 1600, q: 2 }),
   landing: (c, o, { strength = 0.5 } = {}) => {
     tone(c, o, { freq: 90, freqEnd: 40, dur: 0.25, gain: 0.4 * strength + 0.1 });
@@ -95,6 +134,14 @@ const CURSE_RIFF = {
 };
 
 // Event bus → SFX. Mengembalikan { name, opts } atau null.
+// Suara penghuni map hanya terdengar di dekat van; makin jauh makin pelan.
+function near(e, game, sfx) {
+  const r = game.cfg.npc?.soundRadius ?? 45;
+  const d = Math.hypot(e.x - game.car.x, e.z - game.car.z);
+  if (d > r) return null;
+  return { ...sfx, opts: { ...sfx.opts, vol: 1 - (d / r) * 0.8 } };
+}
+
 export const EVENT_SFX = {
   pickup: () => ({ name: 'pickup' }),
   deliver: () => ({ name: 'deliver' }),
@@ -124,5 +171,9 @@ export const EVENT_SFX = {
   hiccup: () => ({ name: 'hiccup' }),
   takeoff: () => ({ name: 'takeoff' }),
   drift_start: () => ({ name: 'driftStart' }),
+  npc_honk: (e, game) => near(e, game, { name: 'honk', opts: { rival: e.kind === 'rival' } }),
+  npc_bumped: (e, game) => near(e, game, { name: 'angryHonk' }),
+  npc_dodge: (e, game) => near(e, game, { name: { person: 'scream', sheep: 'baa', goat: 'baa', chicken: 'cluck' }[e.kind] ?? 'scream' }),
+  npc_zapped: (e, game) => (e.kind === 'sheep' || e.kind === 'goat' ? near(e, game, { name: 'baa' }) : null),
   drift_boost: ({ tier }) => ({ name: 'turbo', opts: { tier } }),
 };

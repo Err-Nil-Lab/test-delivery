@@ -9,6 +9,8 @@ import { DamageLedger } from './damage.js';
 import { PackageSystem } from './packages.js';
 import { HazardSystem } from './hazards.js';
 import { MinotaurSystem } from './minotaurs.js';
+import { TrafficSystem } from './traffic.js';
+import { CrowdSystem } from './crowd.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -26,6 +28,11 @@ export class Game {
     this.packages = new PackageSystem(this.world, config.packages, this.rng, this.bus, config.curse, config.smuggle);
     this.hazards = new HazardSystem(this.world, config.lightning, config.storm, this.rng, this.bus);
     this.minotaurs = new MinotaurSystem(this.world, config.minotaur, this.rng, this.bus, config.curse.effects);
+    // NPC memakai RNG sendiri supaya urutan paket & petir per seed tidak berubah.
+    const npcRng = createRng((seed ^ 0x9e3779b9) >>> 0);
+    this.traffic = new TrafficSystem(this.world, config.npc.traffic, npcRng, this.bus);
+    this.crowd = new CrowdSystem(this.world, config.npc, npcRng, this.bus);
+    this.npcEnabled = config.npc.enabled;
     this.run = new RunState(config.run);
     this.telemetry = new Telemetry(this.bus, () => ({
       run: this.run.runCount,
@@ -78,6 +85,7 @@ export class Game {
     this.damage.reset();
     this.hazards.reset();
     this.minotaurs.reset();
+    this.resetNpcs();
     this.packages.resetDay({ scripted: run.scripted, day: run.day, near: this.car });
     this.steerHistory = [];
     this.collisionCooldown = 0;
@@ -93,6 +101,22 @@ export class Game {
     } else if (run.runCount === 1 && run.day === 2) {
       this.hint('Paket kini muncul acak di seluruh kota. Van punya 3 slot; paket Zeus memakan 2.');
     }
+  }
+
+  resetNpcs() {
+    if (this.npcEnabled) {
+      this.traffic.reset(this.car);
+      this.crowd.reset();
+    } else {
+      this.traffic.cars = [];
+      this.crowd.people = [];
+      this.crowd.animals = [];
+    }
+  }
+
+  setNpcEnabled(on) {
+    this.npcEnabled = on;
+    this.resetNpcs();
   }
 
   // Dionysus: setir tertunda + oleng pelan. Kontrol asli tidak diubah, van menerima versi "mabuk".
@@ -119,7 +143,7 @@ export class Game {
       slopeAt: this.world.slopeAt,
       speedAt: this.world.speedAt,
       colliders: this.world.nearbyColliders,
-      dynamic: this.minotaurs.colliders(),
+      dynamic: [...this.minotaurs.colliders(), ...this.traffic.colliders()],
     });
     for (const e of this.car.events) {
       if (e.type === 'drift_start') this.bus.emit('drift_start', {});
@@ -136,6 +160,7 @@ export class Game {
         continue;
       }
       if (collider.minotaur) this.minotaurs.provoke(collider.minotaur, this.car);
+      if (collider.npcCar) this.traffic.bump(collider.npcCar, this.car, speed);
       if (speed < this.cfg.damage.collisionMinImpact || this.collisionCooldown > 0) continue;
       this.collisionCooldown = this.cfg.damage.collisionCooldown;
       const cost = this.god ? 0 : speed * this.cfg.damage.collisionCostPerSpeed;
@@ -186,6 +211,11 @@ export class Game {
       const side = this.rng.chance(0.5) ? 1 : -1;
       this.car.applyImpulse(ram.dirX * mcfg.knockback, ram.dirZ * mcfg.knockback, side * mcfg.knockSpin);
       this.damage.add('minotaur', this.god ? 0 : this.cfg.damage.minotaur, hour);
+    }
+
+    if (this.npcEnabled) {
+      this.traffic.update(dt, { van: this.car, phase: this.clock.phase, walkers: this.crowd.walkers(), scare: (a, c) => this.crowd.scare(a, c) });
+      this.crowd.update(dt, { van: this.car, phase: this.clock.phase });
     }
 
     while (this.pendingHints.length && this.pendingHints[0].at <= this.clock.elapsed) {

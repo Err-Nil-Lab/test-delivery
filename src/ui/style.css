@@ -734,6 +734,27 @@ body.hades .labels .tag:not(.dest) {
   color: var(--dusk);
 }
 
+.popup.angry {
+  color: #ff7a59;
+  font-size: 22px;
+}
+
+.popup.honk {
+  color: #fde68a;
+  font-size: 16px;
+}
+
+.popup.scream {
+  color: #fef3c7;
+  font-size: 17px;
+  font-style: italic;
+}
+
+.popup.animal {
+  color: #f5f5f4;
+  font-size: 16px;
+}
+
 .popup.drift {
   color: #f4f1ea;
   font-style: italic;

@@ -2,6 +2,7 @@
 // (aturan autoplay browser). Mute dengan tombol M. SFX dipicu dari event bus simulasi.
 import { SFX, EVENT_SFX } from './sfx.js';
 import { EngineSound } from './engine.js';
+import { loopNoise } from './synth.js';
 import { Music } from './music.js';
 
 export class AudioEngine {
@@ -44,6 +45,8 @@ export class AudioEngine {
     this.engineBus = bus(this.cfg.engine, this.master);
     this.engine = new EngineSound(this.ctx, this.engineBus);
     this.music = new Music(this.ctx, this.musicBus);
+    // Gumam kota: keramaian samar saat van di distrik yang ramai.
+    this.murmur = loopNoise(this.ctx, this.sfx, { filter: 'bandpass', freq: 650, q: 0.8 });
   }
 
   setMuted(muted) {
@@ -62,10 +65,17 @@ export class AudioEngine {
     if (node && !(bus === 'master' && this.muted)) node.gain.value = value;
   }
 
+  // opts.vol (0..1): pelankan suara ini saja (mis. suara NPC yang jauh).
   play(name, opts) {
     if (!this.ready || !SFX[name]) return;
     try {
-      SFX[name](this.ctx, this.sfx, opts);
+      let out = this.sfx;
+      if (opts?.vol !== undefined) {
+        out = this.ctx.createGain();
+        out.gain.value = opts.vol;
+        out.connect(this.sfx);
+      }
+      SFX[name](this.ctx, out, opts);
     } catch (err) {
       console.warn('SFX gagal', name, err);
     }
@@ -86,6 +96,10 @@ export class AudioEngine {
     this.music.setMood(inDay ? (game.clock.phase === 'day' ? 'day' : game.clock.phase === 'dusk' ? 'dusk' : 'storm') : null);
     this.music.setModifiers({ dark: Boolean(fx.visionRadius), drunk: fx.steerDelay > 0 });
     this.music.update();
+    const { car, world } = game;
+    const busy =
+      inDay && game.npcEnabled && game.clock.phase !== 'storm' && world.paved.some((e) => ((car.x - e.cx) / e.rx) ** 2 + ((car.z - e.cz) / e.rz) ** 2 <= 1);
+    this.murmur.gain.setTargetAtTime(busy ? 0.035 : 0, this.ctx.currentTime, 0.8);
     // Chronos: detak jam cepat selama kutukan aktif.
     this.tickTimer -= dt;
     if (inDay && fx.clockMultiplier > 1 && this.tickTimer <= 0) {
