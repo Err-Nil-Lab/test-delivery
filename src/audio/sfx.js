@@ -26,6 +26,20 @@ export const SFX = {
     noise(c, o, { dur: 0.5, gain: 0.18, filter: 'bandpass', freq: 500, freqEnd: 3000, q: 1.5 }); // whoosh
     arpeggio(c, o, (tier ? [64, 69, 73, 76] : [69, 76]).map((n) => midi(n)), { type: 'square', dur: 0.08, gain: 0.07, step: 0.045 });
   },
+  // ---------- Zeus LIVE ----------
+  // Gumaman "bahasa dewa": suku kata pendek bernada rendah; tertawa = "HA HA HA" turun; marah = ada guntur.
+  zeusTalk: (c, o, { mood = 'smirk', syllables = 7 } = {}) => {
+    if (mood === 'laugh') {
+      [0, 0.14, 0.28, 0.42, 0.56].forEach((d, i) => tone(c, o, { freq: 190 - i * 14, freqEnd: 150 - i * 14, type: 'sawtooth', dur: 0.09, gain: 0.09, delay: d }));
+      return;
+    }
+    const low = mood === 'furious' || mood === 'angry' ? 85 : 115;
+    for (let i = 0; i < syllables; i++) {
+      tone(c, o, { freq: low + Math.random() * 60, freqEnd: low + Math.random() * 40, type: 'sawtooth', dur: 0.055, gain: 0.07, delay: i * 0.075 });
+    }
+    if (mood === 'furious') noise(c, o, { dur: 0.9, attack: 0.05, gain: 0.25, filter: 'lowpass', freq: 300, freqEnd: 60 });
+  },
+
   // ---------- Penghuni map ----------
   honk: (c, o, { rival = false } = {}) => {
     const f = rival ? 660 : 420;

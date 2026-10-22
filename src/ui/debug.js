@@ -1,7 +1,7 @@
 // Panel debug (tombol ` atau ?debug=1): percepat waktu, lompat jam, beri paket Zeus, god mode.
 import GUI from 'three/addons/libs/lil-gui.module.min.js';
 
-export function createDebugPanel(game, { visible, audio }) {
+export function createDebugPanel(game, { visible, audio, zeusCam }) {
   const gui = new GUI({ title: 'Debug (`)' });
   const teleport = (p) => game.car.reset({ x: p.x, z: p.z, heading: Math.PI });
   const state = {
@@ -32,6 +32,7 @@ export function createDebugPanel(game, { visible, audio }) {
   gui.add(game, 'timeScale', 0.25, 8, 0.25).name('Time scale');
   gui.add(game, 'god').name('God mode (tanpa damage)');
   gui.add(game.car, 'driftEnabled').name('Drift / handbrake (H)').listen();
+  if (zeusCam) gui.add(zeusCam, 'enabled').name('Zeus LIVE (reaksi)');
   const npc = gui.addFolder('Penghuni map (NPC)');
   npc.add(game, 'npcEnabled').name('Semua NPC').onChange((on) => game.setNpcEnabled(on));
   const c = game.cfg.npc;

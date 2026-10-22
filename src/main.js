@@ -8,6 +8,7 @@ import { Hud } from './ui/hud.js';
 import { Screens, downloadJSON } from './ui/screens.js';
 import { createDebugPanel } from './ui/debug.js';
 import { AudioEngine } from './audio/audio.js';
+import { ZeusCam } from './ui/zeusCam.js';
 
 const STEP = 1 / 60;
 const params = new URLSearchParams(window.location.search);
@@ -41,8 +42,14 @@ view.birds.onScare = (b) => {
   audio.play('flap', { vol: Math.max(0.2, 1 - d / 30) });
 };
 const hud = new Hud(app, game, view);
+const zeusCam = new ZeusCam(app, game, {
+  cfg: game.cfg.zeusCam,
+  calm: params.has('calm'),
+  onSpeak: (mood, text) => audio.play('zeusTalk', { mood, syllables: Math.min(10, 3 + Math.round(text.length / 6)) }),
+});
+if (params.get('zeus') === '0') zeusCam.enabled = false;
 const screens = new Screens(app);
-createDebugPanel(game, { visible: params.has('debug'), audio });
+createDebugPanel(game, { visible: params.has('debug'), audio, zeusCam });
 
 let paused = false;
 
@@ -123,6 +130,7 @@ function frame(now) {
   }
   view.update(dt);
   hud.update(dt);
+  zeusCam.update(dt, { paused });
   audio.update(dt, { paused });
   view.render();
   requestAnimationFrame(frame);
@@ -137,6 +145,7 @@ window.__hex = {
   game,
   view,
   audio,
+  zeusCam,
   state: () => ({
     run: game.run.state,
     day: game.run.day,
