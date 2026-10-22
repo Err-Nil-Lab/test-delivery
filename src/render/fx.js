@@ -55,6 +55,27 @@ export class EventFx {
       this.juice.shake(tier ? 0.3 : 0.15);
     });
     on('day_start', () => this.skids.clear());
+    // Tengah malam: peringatan, sambaran raksasa, lumpuh, derek.
+    on('midnight_warning', () => this.juice.shake(0.35));
+    on('midnight_strike', (e) => {
+      const y = groundY(e);
+      this.juice.hitstop(0.32);
+      this.juice.shake(1);
+      this.juice.kick(0.08);
+      this.popups.spawn('ZZZZAAAPPP!!', e.x, y + 6, e.z, 'zap midnight', 1.8, 'major');
+      this.particles.burst(40, { x: e.x, y: y + 1, z: e.z, speed: 14, up: 10, life: 0.9, size: 0.5, color: '#bcd4ff', gravity: 14 });
+      this.particles.burst(24, { x: e.x, y: y + 1.5, z: e.z, speed: 4, up: 3, life: 1.8, size: 1.2, grow: 2, color: '#2c2a28', drag: 2 });
+      this.ring({ x: e.x, y, z: e.z }, '#cfe0ff', 28, 18);
+    });
+    on('midnight_tow_arrive', (e) => {
+      const y = groundY(e);
+      this.popups.spawn('DEREK! 🚛', e.x, y + 5, e.z, 'warn', 1.4);
+      this.juice.shake(0.2);
+    });
+    on('midnight_tow_start', () => {
+      const c = at();
+      this.popups.spawn('DISERET PULANG…', c.x, c.y + 5, c.z, 'loss', 1.8);
+    });
     // Bonus gaya dan paket rapuh.
     on('style_trick', ({ name, value, mult }) => {
       const c = at();

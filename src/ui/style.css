@@ -1766,3 +1766,25 @@ body.cinematic .labels {
     box-shadow: 0 0 0 3px #f6b26b;
   }
 }
+
+/* ---------- Tengah malam: sambaran raksasa & derek ---------- */
+.popup.midnight {
+  font-size: 40px !important;
+  color: #e6efff;
+  text-shadow: 0 0 14px #6fa0ff, 0 3px 0 rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.06em;
+}
+
+.hud-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: #000;
+  opacity: 0;
+  transition: opacity 2.6s ease-in;
+  pointer-events: none;
+}
+
+.hud-fade.show {
+  opacity: 1;
+}

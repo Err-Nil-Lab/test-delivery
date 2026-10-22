@@ -57,6 +57,18 @@ export class CarView {
     this.aura.position.y = 1.4;
     this.root.add(this.auraLight, this.aura);
 
+    // Bintang pusing di atas atap saat van lumpuh (disambar petir raksasa tengah malam).
+    this.stars = new THREE.Group();
+    const starMat = new THREE.MeshBasicMaterial({ color: '#ffe066' });
+    for (let i = 0; i < 5; i++) {
+      const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.34), starMat);
+      star.userData.angle = (i / 5) * Math.PI * 2;
+      this.stars.add(star);
+    }
+    this.stars.position.y = 3.6;
+    this.stars.visible = false;
+    this.root.add(this.stars);
+    this.sparkTime = 0;
     this.pool = pool;
     this.squash = 0;
     this.bounce = 0;
@@ -117,7 +129,7 @@ export class CarView {
 
     // Damage: warna, kemiringan, lalu asap dan percikan yang terus bertambah.
     const state = damage.state;
-    this.paint.color.set(BODY_COLORS[state]);
+    this.paint.color.set(car.paralyzed ? '#2b2724' : BODY_COLORS[state]);
     // Badan van oleng berlebihan ke luar tikungan (pegas yang memantul), dan "wheelie" saat turbo.
     const lat = car.vx * -Math.cos(car.heading) + car.vz * Math.sin(car.heading);
     const rollTarget = car.airborne ? 0 : Math.max(-0.32, Math.min(0.32, lat * (car.handbrake ? 0.03 : 0.022)));
@@ -145,6 +157,28 @@ export class CarView {
           this.emit('#ffb347', car.x, y + 0.6, car.z, 4, 0.4, 0.25);
         }
       }
+    }
+    // Lumpuh: asap tebal, percikan listrik biru, bintang pusing, dan getar halus.
+    this.stars.visible = Boolean(car.paralyzed);
+    if (car.paralyzed) {
+      this.sparkTime += dt;
+      this.body.position.x = Math.sin(this.time * 70) * 0.05;
+      this.stars.children.forEach((star) => {
+        const a = star.userData.angle + this.time * 4;
+        star.position.set(Math.cos(a) * 1.3, Math.sin(this.time * 6 + star.userData.angle) * 0.2, Math.sin(a) * 1.3);
+        star.rotation.y += dt * 6;
+      });
+      this.smokeTimer -= dt;
+      if (this.smokeTimer <= 0) {
+        this.smokeTimer = 0.07;
+        this.emit('#3a3a3a', car.x + (Math.random() - 0.5) * 1.6, y + 1.8, car.z + (Math.random() - 0.5) * 1.6, 3, 1.6, 1.1, 1.6);
+      }
+      if (Math.random() < 0.5) {
+        const a = Math.random() * Math.PI * 2;
+        this.pool?.emit({ x: car.x, y: y + 1.5, z: car.z, vx: Math.cos(a) * 5, vy: 2 + Math.random() * 4, vz: Math.sin(a) * 5, life: 0.3, size: 0.22, color: '#9cc2ff', gravity: 14 });
+      }
+    } else {
+      this.body.position.x = 0;
     }
     // Juice: squash & stretch saat mendarat, kargo membal saat paket diambil.
     this.squash = Math.max(0, this.squash - dt * 4);

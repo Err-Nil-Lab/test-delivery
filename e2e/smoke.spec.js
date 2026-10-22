@@ -182,3 +182,25 @@ test('FTUE: cutscene → Hari Pelatihan bersama Hestia → Day 1', async ({ page
   expect(await page.evaluate(() => localStorage.getItem('hex.ftue'))).toBe('1');
   expect(errors).toEqual([]);
 });
+
+test('tengah malam: peringatan → petir raksasa → lumpuh → derek → laporan diderek', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?seed=9&tutorial=0');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.hud-clock')).toContainText('06:');
+  await page.evaluate(() => {
+    const g = window.__hex.game;
+    g.god = true;
+    g.car.reset({ ...g.world.ref.cityRoad, heading: 0 });
+    g.clock.setHour(23.99);
+  });
+  await expect(page.locator('.hud-banner')).toContainText('TENGAH MALAM', { timeout: 60_000 });
+  await expect.poll(() => page.evaluate(() => window.__hex.game.car.paralyzed), { timeout: 60_000 }).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__hex.game.midnight.phase), { timeout: 60_000 }).toBe('tow');
+  await expect(page.locator('.screen.report')).toBeVisible({ timeout: 90_000 });
+  expect(await page.evaluate(() => window.__hex.game.run.lastReport.towed)).toBe(true);
+  expect(errors).toEqual([]);
+});

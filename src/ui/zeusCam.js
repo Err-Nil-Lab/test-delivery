@@ -19,6 +19,9 @@ const LINES = {
   ram: { mood: 'laugh', lines: ['Sapi-sapiku menyapamu!', 'MOOO! HAHAHA'] },
   stolen: { mood: 'laugh', lines: ['HAHA! Iris lebih cepat darimu!', 'Paketmu diambil saingan! 😂', 'Kalah cepat sama Iris. Memalukan~'] },
   dropped: { mood: 'smirk', lines: ['Senggolan yang bagus. Hmph.', 'Wah, kau bisa juga nakal 😏', 'Iris pasti kesal. HEHE'] },
+  midnightStart: { mood: 'furious', lines: ['TENGAH MALAM! WAKTUMU HABIS, MORTAL!', 'SUDAH KUBILANG PULANG! SEKARANG TERIMA INI!'] },
+  midnightStrike: { mood: 'laugh', lines: ['HAHAHA! MAU KE MANA SEKARANG?!', 'KENA KAU! TIDAK ADA YANG LOLOS DARI ZEUS!'] },
+  midnightTow: { mood: 'laugh', lines: ['Derek! Bayar ya, kurir~ 😈', 'Sampai jumpa besok. Kalau van-mu masih hidup.'] },
   midnight: { mood: 'furious', lines: ['TENGAH MALAM SEBENTAR LAGI!', 'Mau diderek? HAHAHA'] },
 };
 
@@ -127,6 +130,9 @@ export class ZeusCam {
     on('hard_landing', () => storm() && this.react('landing'));
     on('minotaur_hit', () => storm() && this.react('ram'));
     on('package_stolen', () => this.say('stolen', 2));
+    on('midnight_start', () => this.say('midnightStart', 5, 3));
+    on('midnight_strike', () => this.say('midnightStrike', 5, 3));
+    on('midnight_tow_start', () => this.say('midnightTow', 5, 3));
     on('package_dropped', () => this.say('dropped', 2));
     // Titah dewa harian diumumkan Zeus sendiri.
     on('day_modifier', ({ icon, zeus }) => this.sayText('smirk', `${icon} ${zeus}`, 3, 4.5));

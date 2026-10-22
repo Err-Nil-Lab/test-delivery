@@ -250,6 +250,20 @@ export const CONFIG = {
     modifiersFromDay: 2, // titah dewa harian mulai hari ini
   },
 
+  // Tengah malam (24:00): kalau van di luar HQ, Zeus menjatuhkan petir raksasa yang pasti kena,
+  // van lumpuh, lalu mobil derek menyeretnya ke HQ (biaya derek masuk laporan). Di HQ: aman.
+  midnight: {
+    enabled: true,
+    warnSeconds: 1.8, // peringatan raksasa sebelum menyambar
+    paralyzedSeconds: 2.6, // van lumpuh dan gosong sebelum derek datang
+    arriveSeconds: 2.2, // mobil derek tiba
+    hookSeconds: 0.7, // mengaitkan van
+    towSeconds: 3.6, // diseret ke HQ (kecepatan menyesuaikan jarak)
+    strikeRadius: 4.5,
+    warnRadius: 9,
+    truckDistance: 48, // mobil derek mulai sejauh ini dari van, di sisi HQ
+  },
+
   // "Zeus LIVE": reaksi Zeus di pojok layar (ejek saat badai, marah saat masuk wilayahnya). ?zeus=0 mematikan.
   zeusCam: {
     enabled: true,

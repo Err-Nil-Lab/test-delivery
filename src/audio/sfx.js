@@ -40,6 +40,35 @@ export const SFX = {
   },
   late: (c, o) => [0, 0.18].forEach((d) => tone(c, o, { freq: 520, freqEnd: 380, type: 'square', dur: 0.15, gain: 0.07, delay: d })),
 
+  // ---------- Tengah malam ----------
+  // Lonceng 12 dentang cepat, dentang makin rendah.
+  midnightBell: (c, o) => {
+    for (let i = 0; i < 12; i++) {
+      const d = i * 0.13;
+      tone(c, o, { freq: 196 - i * 2, type: 'sine', dur: 0.9, gain: 0.14, delay: d });
+      tone(c, o, { freq: 392 - i * 4, type: 'sine', dur: 0.6, gain: 0.06, delay: d });
+    }
+  },
+  // Dengung listrik naik selama peringatan.
+  chargeUp: (c, o, { seconds = 1.8 } = {}) => {
+    tone(c, o, { freq: 80, freqEnd: 900, type: 'sawtooth', dur: seconds, attack: 0.1, gain: 0.1 });
+    tone(c, o, { freq: 160, freqEnd: 1800, type: 'square', dur: seconds, attack: 0.3, gain: 0.04 });
+    noise(c, o, { dur: seconds, attack: 0.2, gain: 0.08, filter: 'highpass', freq: 800, freqEnd: 5000 });
+  },
+  // Guntur raksasa: retakan putih, dentum sub-bass, gemuruh panjang.
+  giantThunder: (c, o) => {
+    noise(c, o, { dur: 0.25, gain: 0.7, filter: 'highpass', freq: 1500 });
+    tone(c, o, { freq: 55, freqEnd: 28, type: 'sine', dur: 1.8, gain: 0.7, delay: 0.02 });
+    noise(c, o, { dur: 3.2, attack: 0.04, gain: 0.55, filter: 'lowpass', freq: 700, freqEnd: 40, delay: 0.1 });
+    noise(c, o, { dur: 1.2, gain: 0.25, filter: 'bandpass', freq: 3000, q: 1, delay: 0.3 });
+  },
+  zapDrone: (c, o) => [0, 0.2, 0.4, 0.6].forEach((d) => tone(c, o, { freq: 120, freqEnd: 60, type: 'sawtooth', dur: 0.25, gain: 0.07, delay: d })),
+  towHorn: (c, o) => [0, 0.32].forEach((d) => tone(c, o, { freq: 330, type: 'square', dur: 0.26, gain: 0.08, delay: d })),
+  towHook: (c, o) => {
+    noise(c, o, { dur: 0.1, gain: 0.2, filter: 'bandpass', freq: 1800, q: 4 });
+    tone(c, o, { freq: 140, freqEnd: 90, type: 'square', dur: 0.2, gain: 0.12, delay: 0.05 });
+  },
+
   // ---------- Saingan & bengkel ----------
   stolen: (c, o) => {
     noise(c, o, { dur: 0.3, gain: 0.12, filter: 'bandpass', freq: 600, freqEnd: 2500, q: 2 });
@@ -230,6 +259,11 @@ export const EVENT_SFX = {
   package_stolen: (e, game) => near(e, game, { name: 'stolen' }) ?? { name: 'stolen', opts: { vol: 0.35 } },
   package_dropped: () => ({ name: 'dropped' }),
   upgrade_bought: () => ({ name: 'anvil' }),
+  midnight_start: () => ({ name: 'midnightBell' }),
+  midnight_warning: ({ seconds }) => ({ name: 'chargeUp', opts: { seconds } }),
+  midnight_strike: () => ({ name: 'giantThunder' }),
+  midnight_tow_call: () => ({ name: 'towHorn' }),
+  midnight_tow_arrive: () => ({ name: 'towHook' }),
   strike_hit: ({ rod }) => (rod ? { name: 'rodBlock' } : null),
   npc_honk: (e, game) => near(e, game, { name: 'honk', opts: { rival: e.kind === 'rival' } }),
   npc_bumped: (e, game) => near(e, game, { name: 'angryHonk' }),

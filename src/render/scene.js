@@ -14,6 +14,7 @@ import { TrafficView } from './trafficView.js';
 import { CrowdView } from './crowdView.js';
 import { Birds } from './birds.js';
 import { RouteView } from './routeView.js';
+import { TowView } from './towView.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
@@ -97,6 +98,8 @@ export class View {
     this.crowdView = new CrowdView(this.scene, game);
     this.birds = new Birds(this.scene, game, game.cfg.npc.birds);
     this.routeView = new RouteView(this.scene, game);
+    this.towView = new TowView(this.scene, game);
+    this.midnightTint = 0; // 0..1: langit memerah & gelap selama urutan tengah malam
     this.fx = new EventFx({ game, particles: this.particles, popups: this.popups, juice: this.juice, carView: this.carView });
 
     this.target = new THREE.Vector3(game.car.x, 0, game.car.z);
@@ -108,7 +111,14 @@ export class View {
       const d = Math.hypot(s.x - game.car.x, s.z - game.car.z);
       this.flash = Math.max(this.flash, s.hit ? 1 : d < 30 ? 0.45 : 0.15);
     });
-    game.bus.on('day_start', () => this.snapCamera());
+    game.bus.on('day_start', () => {
+      this.snapCamera();
+      this.midnightTint = 0;
+    });
+    // Sambaran raksasa: layar putih penuh sesaat (lebih lama dari petir biasa).
+    game.bus.on('midnight_strike', () => {
+      this.flash = 2.2;
+    });
     game.bus.on('smuggle_resolved', (e) => {
       if (e.scam) this.flash = 1;
     });
@@ -177,10 +187,16 @@ export class View {
     const night = nightFactor(clock.hour);
     const { a, b, t } = lightingAt(clock.hour);
     this.flash = Math.max(0, this.flash - dt * 4);
-    this.scene.background.copy(tmpA.set(a.sky).lerp(tmpB.set(b.sky), t)).lerp(tmpB.set('#e8ecff'), this.flash * 0.6);
-    this.sun.intensity = THREE.MathUtils.lerp(a.sun, b.sun, t);
+    // Tengah malam: langit menggelap dan memerah mengikuti peringatan, lalu tetap gelap setelah sambaran.
+    const mTarget = this.game.midnight.active ? Math.max(0.25, this.game.midnight.warnProgress) : 0;
+    this.midnightTint += (mTarget - this.midnightTint) * (1 - Math.exp(-3 * dt));
+    this.scene.background
+      .copy(tmpA.set(a.sky).lerp(tmpB.set(b.sky), t))
+      .lerp(tmpB.set('#3a0d12'), this.midnightTint * 0.85)
+      .lerp(tmpB.set('#e8ecff'), Math.min(1, this.flash * 0.6));
+    this.sun.intensity = THREE.MathUtils.lerp(a.sun, b.sun, t) * (1 - this.midnightTint * 0.7);
     this.sun.color.copy(tmpA.set(a.sunColor).lerp(tmpB.set(b.sunColor), t));
-    this.hemi.intensity = THREE.MathUtils.lerp(a.hemi, b.hemi, t) + this.flash * 1.5;
+    this.hemi.intensity = THREE.MathUtils.lerp(a.hemi, b.hemi, t) * (1 - this.midnightTint * 0.4) + this.flash * 1.5;
 
     this.worldView.update(dt, night, car, ISO_OFFSET);
     this.carView.update(dt, this.game, night);
@@ -191,6 +207,7 @@ export class View {
     this.crowdView.update(dt);
     this.birds.update(dt);
     this.routeView.update(dt);
+    this.towView.update(dt);
     this.fx.update(dt);
     this.particles.update(dt);
     this.popups.update(dt);

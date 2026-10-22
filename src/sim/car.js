@@ -28,6 +28,7 @@ export class Car {
     this.vy = 0;
     this.airborne = false;
     this.handbrake = false;
+    this.paralyzed = false;
     this.gripLoss = 0; // 1 = grip drift penuh, turun ke 0 setelah Space dilepas
     this.drifting = false;
     this.driftTime = 0;
@@ -64,6 +65,8 @@ export class Car {
   // env: { heightAt, slopeAt, colliders: (x, z, r) => [], dynamic: [] }.
   // Mengembalikan daftar tumbukan { speed, collider }.
   update(dt, controls, env = {}) {
+    // Lumpuh (disambar petir raksasa tengah malam): tidak bisa gas, rem, atau belok.
+    if (this.paralyzed) controls = { throttle: 0, steer: 0, handbrake: false };
     const ground = env.heightAt ?? (() => 0);
     if (this.y === null) this.y = ground(this.x, this.z);
     const prevX = this.x;
