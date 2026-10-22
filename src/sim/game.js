@@ -87,7 +87,7 @@ export class Game {
     this.bus.emit('day_start', { quota: run.quota, scripted: run.scripted });
 
     if (run.scripted) {
-      this.hint('W/S: gas & rem · A/D: belok');
+      this.hint(this.car.driftEnabled ? 'W/S: gas & rem · A/D: belok · Space: ngepot (drift) · H: drift on/off' : 'W/S: gas & rem · A/D: belok');
       this.hint('Paket ⚡ Zeus menunggu di Gerbang Istana Zeus. Ikuti panah ⚡ ke utara, berhenti di penanda, lalu tekan E.', 4);
       this.hint('Hati-hati: Minotaur di padang menyeruduk van yang lewat. Lihat arah ancang-ancangnya, lalu menghindar!', 12);
     } else if (run.runCount === 1 && run.day === 2) {
@@ -121,6 +121,14 @@ export class Game {
       colliders: this.world.nearbyColliders,
       dynamic: this.minotaurs.colliders(),
     });
+    for (const e of this.car.events) {
+      if (e.type === 'drift_start') this.bus.emit('drift_start', {});
+      else {
+        this.bus.emit('drift_end', { seconds: round2(e.seconds), tier: e.tier });
+        if (e.tier >= 0) this.bus.emit('drift_boost', { tier: e.tier });
+      }
+    }
+    this.car.events.length = 0;
     this.collisionCooldown -= dt;
     for (const { speed, collider } of impacts) {
       if (collider.landing) {

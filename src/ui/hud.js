@@ -259,6 +259,7 @@ export class Hud {
     this.root.classList.toggle('night', clock.phase !== PHASE.DAY);
     this.root.classList.toggle('storm', clock.phase === PHASE.STORM || clock.phase === PHASE.LIMIT);
     this.root.classList.toggle('fast', game.car.speed > game.cfg.car.maxSpeed * 0.92 && !game.car.airborne);
+    this.root.classList.toggle('turbo', game.car.boostTime > 0);
     document.body.classList.toggle('hades', Boolean(fx.visionRadius));
 
     this.updateArrows();

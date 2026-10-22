@@ -27,7 +27,7 @@ export class EngineSound {
 
   update(dt, { car, damageState, active }) {
     const now = this.ctx.currentTime;
-    const ratio = Math.min(1, car.speed / 22);
+    const ratio = Math.min(1, car.speed / 22) + (car.boostTime > 0 ? 0.25 : 0); // turbo: mesin meraung
     // Rusak berat: mesin sesekali tersendat.
     this.sputter = Math.max(0, this.sputter - dt);
     if (damageState === 3 && Math.random() < dt * 1.5) this.sputter = 0.12;
@@ -39,7 +39,8 @@ export class EngineSound {
     this.gain.gain.setTargetAtTime(target, now, 0.06);
 
     const lateral = Math.abs(car.vx * -Math.cos(car.heading) + car.vz * Math.sin(car.heading));
-    const skid = active && !car.airborne ? Math.min(1, Math.max(0, (lateral - 4) / 8)) * 0.1 : 0;
+    const squeal = car.drifting || (car.handbrake && car.speed > 4) ? 0.06 : 0;
+    const skid = active && !car.airborne ? Math.min(1, Math.max(0, (lateral - 4) / 8)) * 0.1 + squeal : 0;
     this.skid.gain.setTargetAtTime(skid, now, 0.04);
   }
 }

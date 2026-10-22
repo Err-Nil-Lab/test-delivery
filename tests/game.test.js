@@ -134,3 +134,22 @@ describe('Alur run', () => {
     expect(deliver).toMatchObject({ day: 1, packageType: 'zeus', pay: zeus.pay });
   });
 });
+
+describe('Drift', () => {
+  it('ngepot lama di jalan memancarkan drift_start, drift_end, dan drift_boost', () => {
+    const game = newGame();
+    game.god = true;
+    const seen = [];
+    for (const e of ['drift_start', 'drift_end', 'drift_boost']) game.bus.on(e, (p) => seen.push({ e, ...p }));
+    // Lapangan datar & kosong: padang Minotaur dimatikan supaya tidak diganggu.
+    game.run.day = 0;
+    teleport(game, game.world.ref.meadow, 0);
+    game.car.vz = game.cfg.car.maxSpeed;
+    for (let i = 0; i < 120; i++) game.step(1 / 60, { throttle: 1, steer: 1, handbrake: true });
+    for (let i = 0; i < 60; i++) game.step(1 / 60, { throttle: 1, steer: 0 });
+    expect(seen[0].e).toBe('drift_start');
+    const end = seen.find((s) => s.e === 'drift_end');
+    expect(end.tier).toBeGreaterThanOrEqual(0);
+    expect(seen.some((s) => s.e === 'drift_boost')).toBe(true);
+  });
+});

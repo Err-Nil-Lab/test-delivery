@@ -25,6 +25,16 @@ window.addEventListener('pointerdown', unlockAudio);
 document.addEventListener('click', (e) => {
   if (e.target.closest('.card button')) audio.play('uiClick');
 });
+// Drift/handbrake bisa dimatikan: ?drift=0 di URL, tombol H, atau panel debug. Pilihan H diingat di browser.
+const storedDrift = (() => {
+  try {
+    return localStorage.getItem('hex.drift');
+  } catch {
+    return null;
+  }
+})();
+if (params.has('drift')) game.car.driftEnabled = params.get('drift') !== '0';
+else if (storedDrift !== null) game.car.driftEnabled = storedDrift === '1';
 const hud = new Hud(app, game, view);
 const screens = new Screens(app);
 createDebugPanel(game, { visible: params.has('debug'), audio });
@@ -80,6 +90,15 @@ game.bus.on('day_end', () => {
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') togglePause();
   if (e.code === 'KeyM') hud.toast(audio.toggleMute() ? '🔇 Suara mati (M)' : '🔊 Suara nyala (M)', '', 1.5);
+  if (e.code === 'KeyH') {
+    game.car.driftEnabled = !game.car.driftEnabled;
+    try {
+      localStorage.setItem('hex.drift', game.car.driftEnabled ? '1' : '0');
+    } catch {
+      // penyimpanan diblokir: pilihan hanya berlaku sesi ini
+    }
+    hud.toast(game.car.driftEnabled ? '🛞 Drift nyala: tahan Space (H)' : '🚐 Drift mati: setir normal (H)', '', 1.8);
+  }
 });
 
 let last = performance.now();

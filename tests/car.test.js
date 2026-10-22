@@ -134,4 +134,95 @@ describe('Car', () => {
     expect(car.vz).toBe(10);
     expect(car.stopped).toBe(false);
   });
+
+  describe('handbrake / drift', () => {
+    const DT = 1 / 60;
+    const atSpeed = () => {
+      const car = new Car(CONFIG.car);
+      for (let i = 0; i < 300; i++) car.update(DT, { throttle: 1, steer: 0 });
+      return car;
+    };
+    // Ngepot: tahan Space + belok sambil ngegas, lalu lepas dan luruskan.
+    const drift = (car, seconds) => {
+      const events = [];
+      let maxSlip = 0;
+      for (let i = 0; i < seconds * 60; i++) {
+        car.update(DT, { throttle: 1, steer: 1, handbrake: true });
+        maxSlip = Math.max(maxSlip, car.slipAngle);
+        events.push(...car.events.splice(0));
+      }
+      for (let i = 0; i < 90; i++) {
+        car.update(DT, { throttle: 1, steer: 0 });
+        events.push(...car.events.splice(0));
+      }
+      return { events, maxSlip };
+    };
+
+    it('handbrake membuat van menyamping dan berbelok lebih tajam', () => {
+      const normal = atSpeed();
+      const hb = atSpeed();
+      for (let i = 0; i < 30; i++) {
+        normal.update(DT, { throttle: 1, steer: 1 });
+        hb.update(DT, { throttle: 1, steer: 1, handbrake: true });
+      }
+      expect(hb.heading).toBeGreaterThan(normal.heading * 1.3);
+      expect(hb.slipAngle).toBeGreaterThan(normal.slipAngle + 0.2);
+      expect(hb.slipAngle).toBeGreaterThan(CONFIG.car.drift.minAngle);
+      expect(hb.speed).toBeLessThanOrEqual(CONFIG.car.maxSpeed + 1e-6); // ngepot tidak menambah kecepatan
+    });
+
+    it('drift lama lalu lepas = mini-turbo tingkat tertinggi', () => {
+      const car = atSpeed();
+      const { events } = drift(car, 2);
+      const end = events.find((e) => e.type === 'drift_end');
+      expect(events[0].type).toBe('drift_start');
+      expect(end.tier).toBe(1);
+      expect(end.seconds).toBeGreaterThan(1.6);
+    });
+
+    it('turbo benar-benar mendorong van di atas kecepatan maksimum sesaat', () => {
+      const car = atSpeed();
+      for (let i = 0; i < 120; i++) car.update(DT, { throttle: 1, steer: 1, handbrake: true });
+      let top = 0;
+      let boosted = false;
+      for (let i = 0; i < 120; i++) {
+        car.update(DT, { throttle: 1, steer: 0 });
+        boosted ||= car.boostTime > 0;
+        top = Math.max(top, car.forwardSpeed);
+      }
+      expect(boosted).toBe(true);
+      expect(top).toBeGreaterThan(CONFIG.car.maxSpeed * 1.1);
+      for (let i = 0; i < 300; i++) car.update(DT, { throttle: 1, steer: 0 });
+      expect(car.forwardSpeed).toBeCloseTo(CONFIG.car.maxSpeed, 1);
+    });
+
+    it('drift pendek tidak memberi turbo', () => {
+      const car = atSpeed();
+      const { events } = drift(car, 0.3);
+      const end = events.find((e) => e.type === 'drift_end');
+      if (end) expect(end.tier).toBe(-1);
+      expect(car.boostTime).toBe(0);
+    });
+
+    it('diseruduk (tanpa handbrake) tidak dihitung drift', () => {
+      const car = atSpeed();
+      car.applyImpulse(20, 0, 3);
+      for (let i = 0; i < 120; i++) car.update(DT, { throttle: 1, steer: 0 });
+      expect(car.events).toHaveLength(0);
+      expect(car.boostTime).toBe(0);
+    });
+
+    it('drift dimatikan: Space tidak berpengaruh', () => {
+      const off = atSpeed();
+      off.driftEnabled = false;
+      const normal = atSpeed();
+      for (let i = 0; i < 60; i++) {
+        off.update(DT, { throttle: 1, steer: 1, handbrake: true });
+        normal.update(DT, { throttle: 1, steer: 1 });
+      }
+      expect(off.heading).toBeCloseTo(normal.heading, 6);
+      expect(off.x).toBeCloseTo(normal.x, 6);
+      expect(off.events).toHaveLength(0);
+    });
+  });
 });

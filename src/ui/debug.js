@@ -31,6 +31,7 @@ export function createDebugPanel(game, { visible, audio }) {
   gui.add(state, 'info').name('Info').disable().listen();
   gui.add(game, 'timeScale', 0.25, 8, 0.25).name('Time scale');
   gui.add(game, 'god').name('God mode (tanpa damage)');
+  gui.add(game.car, 'driftEnabled').name('Drift / handbrake (H)').listen();
   for (const key of Object.keys(state)) if (key !== 'info') gui.add(state, key);
   if (audio) {
     const sound = gui.addFolder('Suara (M = mute)');

@@ -52,6 +52,7 @@ URL bisa diberi parameter:
 |---|---|
 | `?seed=123` | Run deterministik: spawn paket dan petir sama persis setiap kali |
 | `?debug=1` | Panel debug langsung terbuka (bisa juga dibuka dengan tombol <kbd>`</kbd>) |
+| `?drift=0` | Drift/handbrake mati (setir normal). `?drift=1` menyalakannya |
 
 ## Kontrol
 
@@ -59,10 +60,25 @@ URL bisa diberi parameter:
 |---|---|
 | <kbd>W</kbd> / <kbd>S</kbd> (atau panah) | Gas / rem, lalu mundur |
 | <kbd>A</kbd> / <kbd>D</kbd> | Belok |
+| <kbd>Space</kbd> (tahan) | Handbrake: van ngepot/drift. Drift lama lalu lepas = turbo |
+| <kbd>H</kbd> | Drift on/off (diingat di browser) |
 | <kbd>E</kbd> | Berhenti di penanda, lalu ambil/antar paket. Di HQ: akhiri hari |
 | <kbd>Esc</kbd> | Pause (ada tombol unduh log playtest) |
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
+
+## Drift & handbrake
+
+Supaya menyetir terasa konyol dan seru:
+- **Cara ngepot:** tahan <kbd>Space</kbd> sambil belok. Buntut van langsung terlempar ke samping, lalu badan van oleng berlebihan. Arah laju menyusul hidung van pelan-pelan tanpa kehilangan kecepatan, jadi ngepot di tikungan tidak memperlambat. Lawan setir untuk mengontrol sudutnya.
+- **Mini-turbo:**
+  - Drift ≥ 0,7 detik lalu lepas: **TURBO!** (percikan biru, ×1,25 kecepatan maks selama 0,6 detik).
+  - Drift ≥ 1,6 detik: **MEGA TURBO!!** (percikan oranye, ×1,4 selama 1,1 detik).
+  - Saat turbo, van sedikit *wheelie* dan keluar api dari knalpot.
+  - Turbo tidak keluar kalau van berputar-putar sampai hampir berhenti.
+- **Feedback:** bekas ban di tanah, asap ban, teks "SKRRT!" / "WHEEE!" / "NGEPOT!", decit ban, dan bunyi whoosh turbo.
+- **Diseruduk Minotaur tidak dihitung drift:** drift hanya dimulai dengan handbrake.
+- **Bisa dimatikan:** tombol <kbd>H</kbd>, `?drift=0`, panel debug, atau `car.drift.enabled` di config. Semua angka ada di `car.drift`.
 
 ## Yang ada di graybox ini
 
@@ -163,7 +179,7 @@ src/
     vegetation.js  sebaran pohon, semak, batu (deterministik, berkelompok)
     geometry.js    helper polyline/polygon
     collision.js   collider kotak berotasi, dinding kapsul, lingkaran + grid spasial
-    car.js         driving arcade, tanjakan, collision, impuls
+    car.js         driving arcade, handbrake/drift + mini-turbo, tanjakan, collision, impuls
     minotaurs.js   AI Minotaur: berkeliaran → ancang-ancang → menyeruduk → pusing (+ mode Ares/Aphrodite)
     curses.js      definisi 5 curse, gabungan efek dari cargo, dan tampilan tiap tipe paket
     clock.js       jam dan fase hari

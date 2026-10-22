@@ -1,4 +1,4 @@
-// Keyboard: WASD/panah untuk menyetir, E untuk ambil/antar/akhiri hari.
+// Keyboard: WASD/panah untuk menyetir, Space handbrake/drift, E untuk ambil/antar/akhiri hari.
 const BINDINGS = {
   up: ['KeyW', 'ArrowUp'],
   down: ['KeyS', 'ArrowDown'],
@@ -39,6 +39,7 @@ export class Input {
     return {
       throttle: (this.isHeld('up') ? 1 : 0) - (this.isHeld('down') ? 1 : 0),
       steer: (this.isHeld('left') ? 1 : 0) - (this.isHeld('right') ? 1 : 0),
+      handbrake: this.held.has('Space'),
       interact: this.consume('KeyE'),
     };
   }
