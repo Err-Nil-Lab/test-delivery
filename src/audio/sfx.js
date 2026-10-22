@@ -18,6 +18,14 @@ export const SFX = {
     tone(c, o, { freq: 110, freqEnd: 50, type: 'sine', dur: 0.18, gain: 0.3 * strength });
     if (strength > 0.6) noise(c, o, { dur: 0.25, gain: 0.12, filter: 'highpass', freq: 3500, delay: 0.02 }); // kaca/logam
   },
+  driftStart: (c, o) => {
+    noise(c, o, { dur: 0.3, gain: 0.12, filter: 'bandpass', freq: 2400, freqEnd: 1500, q: 8 }); // decit ban
+    tone(c, o, { freq: 520, freqEnd: 880, type: 'triangle', dur: 0.12, gain: 0.06, delay: 0.05 }); // "wii!"
+  },
+  turbo: (c, o, { tier = 0 } = {}) => {
+    noise(c, o, { dur: 0.5, gain: 0.18, filter: 'bandpass', freq: 500, freqEnd: 3000, q: 1.5 }); // whoosh
+    arpeggio(c, o, (tier ? [64, 69, 73, 76] : [69, 76]).map((n) => midi(n)), { type: 'square', dur: 0.08, gain: 0.07, step: 0.045 });
+  },
   takeoff: (c, o) => noise(c, o, { dur: 0.35, gain: 0.1, filter: 'bandpass', freq: 400, freqEnd: 1600, q: 2 }),
   landing: (c, o, { strength = 0.5 } = {}) => {
     tone(c, o, { freq: 90, freqEnd: 40, dur: 0.25, gain: 0.4 * strength + 0.1 });
@@ -115,4 +123,6 @@ export const EVENT_SFX = {
   early_end_requested: () => ({ name: 'alert' }),
   hiccup: () => ({ name: 'hiccup' }),
   takeoff: () => ({ name: 'takeoff' }),
+  drift_start: () => ({ name: 'driftStart' }),
+  drift_boost: ({ tier }) => ({ name: 'turbo', opts: { tier } }),
 };

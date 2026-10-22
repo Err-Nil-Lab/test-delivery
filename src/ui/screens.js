@@ -52,6 +52,7 @@ export class Screens {
       <p>Penuhi <b>quota profit</b> setiap hari selama <b>7 hari</b>. Gagal sekali, ulang dari Day 1.</p>
       <ul class="controls">
         <li><kbd>W</kbd><kbd>S</kbd> gas & rem/mundur · <kbd>A</kbd><kbd>D</kbd> belok</li>
+        <li><kbd>Space</kbd> handbrake: ngepot, drift lama = turbo · <kbd>H</kbd> drift on/off</li>
         <li>Berhenti di penanda + <kbd>E</kbd> untuk ambil dan antar paket</li>
         <li>Pulang ke HQ + <kbd>E</kbd> untuk mengakhiri hari · <kbd>Esc</kbd> pause</li>
       </ul>

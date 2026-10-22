@@ -734,6 +734,23 @@ body.hades .labels .tag:not(.dest) {
   color: var(--dusk);
 }
 
+.popup.drift {
+  color: #f4f1ea;
+  font-style: italic;
+  font-size: 22px;
+}
+
+.popup.turbo {
+  color: #7cc4ff;
+  font-size: 26px;
+  font-style: italic;
+}
+
+.popup.turbo.mega {
+  color: #ff9f3d;
+  font-size: 32px;
+}
+
 @keyframes bump {
   0% {
     transform: scale(1);
@@ -806,8 +823,13 @@ body.hades .labels .tag:not(.dest) {
   mask-image: radial-gradient(circle at 50% 50%, transparent 45%, #000 80%);
 }
 
-.hud.fast .hud-speedlines {
+.hud.fast .hud-speedlines,
+.hud.turbo .hud-speedlines {
   opacity: 1;
+}
+
+.hud.turbo .hud-speedlines {
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.16) 0deg 1.5deg, transparent 1.5deg 7deg);
 }
 
 /* Blessing hilang: dunia sesaat kehilangan warna. */

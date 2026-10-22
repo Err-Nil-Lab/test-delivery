@@ -64,6 +64,9 @@ export class CarView {
     this.sparkTimer = 0;
     this.hitFlash = 0;
     this.time = 0;
+    this.roll = 0; // miring ke samping saat belok/ngepot (pegas, sengaja berlebihan)
+    this.rollVel = 0;
+    this.wheelie = 0;
 
     bus.on('strike_hit', (h) => {
       if (!h.blocked) this.hitFlash = 1;
@@ -113,8 +116,16 @@ export class CarView {
     // Damage: warna, kemiringan, lalu asap dan percikan yang terus bertambah.
     const state = damage.state;
     this.paint.color.set(BODY_COLORS[state]);
-    this.body.rotation.z = state === 3 ? 0.07 : state === 2 ? 0.035 : 0;
-    this.body.rotation.x = state === 3 ? -0.03 : 0;
+    // Badan van oleng berlebihan ke luar tikungan (pegas yang memantul), dan "wheelie" saat turbo.
+    const lat = car.vx * -Math.cos(car.heading) + car.vz * Math.sin(car.heading);
+    const rollTarget = car.airborne ? 0 : Math.max(-0.32, Math.min(0.32, lat * (car.handbrake ? 0.03 : 0.022)));
+    this.rollVel += ((rollTarget - this.roll) * 90 - this.rollVel * 9) * dt;
+    this.roll += this.rollVel * dt;
+    const boost = car.boostTime > 0 ? Math.min(1, car.boostTime * 3) : 0;
+    this.wheelie += (boost - this.wheelie) * (1 - Math.exp(-10 * dt));
+    this.body.rotation.z = (state === 3 ? 0.07 : state === 2 ? 0.035 : 0) + this.roll;
+    this.body.rotation.x = (state === 3 ? -0.03 : 0) - this.wheelie * 0.16;
+    this.body.position.y = this.wheelie * 0.3 + Math.abs(this.roll) * 0.6;
     this.hitFlash = Math.max(0, this.hitFlash - dt * 3);
     this.paint.emissiveIntensity = this.hitFlash * 1.5;
 
@@ -137,7 +148,7 @@ export class CarView {
     this.squash = Math.max(0, this.squash - dt * 4);
     this.bounce = Math.max(0, this.bounce - dt * 5);
     const sq = Math.sin(this.squash * Math.PI) * 0.25;
-    this.body.scale.set(1 + sq, 1 - sq, 1 + sq);
+    this.body.scale.set(1 + sq, 1 - sq, 1 + sq + this.wheelie * 0.1);
     this.cargo.scale.setScalar(1 + Math.sin(this.bounce * Math.PI) * 0.35);
 
     // Lampu depan menyala saat senja; aura kuning selama membawa paket Zeus.

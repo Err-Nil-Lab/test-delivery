@@ -1,8 +1,12 @@
 // Efek visual per event simulasi: partikel, teks melayang, camera shake, hitstop.
 // Juga efek per frame: debu ban saat drift, deteksi van lepas landas, cegukan Dionysus.
 import { CURSES } from '../sim/curses.js';
+import { SkidMarks } from './skidmarks.js';
 
 const GOLD = '#ffd84a';
+const DRIFT_WORDS = ['SKRRT!', 'WHEEE!', 'NGEPOT!', 'YIHAA!', 'BRRRT!', 'WUSHH!'];
+const TIER_COLORS = ['#7cc4ff', '#ff9f3d']; // percikan ban: biru = turbo kecil, oranye = turbo besar
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export class EventFx {
   constructor({ game, particles, popups, juice, carView }) {
@@ -14,6 +18,7 @@ export class EventFx {
     this.wasAirborne = false;
     this.hiccupTimer = 3;
     this.dustTimer = 0;
+    this.skids = new SkidMarks(carView.scene);
     const hs = game.cfg.juice.hitstop;
     const on = (event, fn) => game.bus.on(event, fn);
     const at = () => this.carPos();
@@ -30,6 +35,19 @@ export class EventFx {
       this.popups.spawn(`+$${pay}`, c.x, c.y + 4, c.z, 'money');
       this.juice.kick(0.03);
     });
+    on('drift_start', () => {
+      const c = at();
+      this.popups.spawn(pick(DRIFT_WORDS), c.x, c.y + 3.5, c.z, 'drift', 0.7);
+    });
+    on('drift_boost', ({ tier }) => {
+      const c = at();
+      const color = TIER_COLORS[tier];
+      this.popups.spawn(tier ? 'MEGA TURBO!!' : 'TURBO!', c.x, c.y + 4, c.z, tier ? 'turbo mega' : 'turbo', 0.9);
+      this.particles.burst(tier ? 22 : 12, { ...c, y: c.y + 0.6, speed: 7, up: 3, life: 0.45, size: 0.35, color, gravity: 10 });
+      this.juice.kick(tier ? 0.05 : 0.03);
+      this.juice.shake(tier ? 0.3 : 0.15);
+    });
+    on('day_start', () => this.skids.clear());
     on('cargo_full', () => {
       const c = at();
       this.popups.spawn('PENUH!', c.x, c.y + 4, c.z, 'warn', 0.8);
@@ -141,14 +159,28 @@ export class EventFx {
     if (car.airborne && !this.wasAirborne) game.bus.emit('takeoff', {});
     this.wasAirborne = car.airborne;
 
-    // Debu ban saat drift.
+    // Ban belakang: debu saat tergelincir, asap + bekas ban + percikan saat ngepot.
     const lateral = Math.abs(car.vx * -Math.cos(car.heading) + car.vz * Math.sin(car.heading));
+    const sx = Math.sin(car.heading);
+    const sz = Math.cos(car.heading);
+    const rear = [-1, 1].map((side) => ({ x: c.x - sx * 1.3 + -sz * 1.1 * side, y: c.y, z: c.z - sz * 1.3 + sx * 1.1 * side }));
+    const skidding = !car.airborne && (car.drifting || (car.handbrake && car.speed > 4) || lateral > 6);
+    this.skids.update(skidding ? rear : null);
     this.dustTimer -= dt;
-    if (!car.airborne && lateral > 5 && this.dustTimer <= 0) {
-      this.dustTimer = 0.04;
-      const bx = c.x - Math.sin(car.heading) * 1.6;
-      const bz = c.z - Math.cos(car.heading) * 1.6;
-      this.particles.emit({ x: bx, y: c.y + 0.3, z: bz, vx: 0, vy: 0.8, vz: 0, life: 0.6, size: 0.5, grow: 1.5, color: '#c9b79a', drag: 2 });
+    if (!car.airborne && (lateral > 5 || car.drifting) && this.dustTimer <= 0) {
+      this.dustTimer = car.drifting ? 0.025 : 0.04;
+      const d = game.cfg.car.drift;
+      let tier = -1;
+      if (car.drifting) d.tiers.forEach((t, i) => (car.driftTime >= t.seconds ? (tier = i) : 0));
+      for (const w of rear) {
+        const smoke = car.drifting ? '#e9e6df' : '#c9b79a';
+        this.particles.emit({ x: w.x, y: w.y + 0.3, z: w.z, vx: (Math.random() - 0.5) * 1.5, vy: 0.9, vz: (Math.random() - 0.5) * 1.5, life: 0.7, size: car.drifting ? 0.7 : 0.5, grow: 1.8, color: smoke, drag: 2 });
+        if (tier >= 0) this.particles.emit({ x: w.x, y: w.y + 0.25, z: w.z, vx: (Math.random() - 0.5) * 6, vy: 2 + Math.random() * 2, vz: (Math.random() - 0.5) * 6, life: 0.25, size: 0.18, color: TIER_COLORS[tier], gravity: 12 });
+      }
+    }
+    // Turbo: api kecil dari knalpot.
+    if (car.boostTime > 0 && Math.random() < 0.7) {
+      this.particles.emit({ x: c.x - sx * 2.2, y: c.y + 0.6, z: c.z - sz * 2.2, vx: -sx * 4, vy: 0.5, vz: -sz * 4, life: 0.25, size: 0.45, grow: -1, color: car.boostMultiplier > 1.3 ? '#ff9f3d' : '#7cc4ff' });
     }
 
     // Dionysus: cegukan acak.

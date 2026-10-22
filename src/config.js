@@ -40,6 +40,25 @@ export const CONFIG = {
     maxClimbSlope: 0.35, // tanjakan lebih curam dari ini (di luar jalan) = tembok
     fallGravity: 30, // gravitasi saat van melayang turun dari undakan
     landingFriction: 0.8,
+    // Handbrake/drift (tahan Space). Bisa dimatikan: tombol H, ?drift=0, atau panel debug.
+    drift: {
+      enabled: true,
+      follow: 5, // seberapa cepat arah laju menyusul hidung van (rad/s); kecil = sudut ngepot lebih lebar
+      gripRecover: 0.45, // detik grip kembali normal setelah Space dilepas (drift masih menyambung)
+      steerBoost: 1.35, // belok lebih tajam saat handbrake
+      kickSpin: 1.3, // sentakan putar saat Space ditekan sambil belok (lucu & snappy)
+      drag: 7, // perlambatan handbrake (dikurangi saat tetap ngegas)
+      throttleDragFactor: 0.3,
+      minSpeed: 8, // di bawah ini tidak dihitung drift
+      minAngle: 0.35, // rad sudut slip minimal supaya dihitung drift
+      grace: 0.25, // detik toleransi slip kecil sebelum drift dianggap selesai
+      // Mini-turbo: drift cukup lama lalu lepas = dorongan sesaat.
+      tiers: [
+        { seconds: 0.7, boostSeconds: 0.6, speedMultiplier: 1.25 },
+        { seconds: 1.6, boostSeconds: 1.1, speedMultiplier: 1.4 },
+      ],
+      boostAccel: 40,
+    },
   },
 
   damage: {
