@@ -6,6 +6,13 @@ import { SkidMarks } from './skidmarks.js';
 const GOLD = '#ffd84a';
 const DRIFT_WORDS = ['SKRRT!', 'WHEEE!', 'NGEPOT!', 'YIHAA!', 'BRRRT!', 'WUSHH!'];
 const TIER_COLORS = ['#7cc4ff', '#ff9f3d']; // percikan ban: biru = turbo kecil, oranye = turbo besar
+const ANGRY = ['WOI!', 'PAKAI MATA!', 'DEMI ZEUS!', 'ASTAGA!', 'HEI HEI HEI!', 'SIM-MU DARI MANA?!'];
+const DODGE_WORDS = {
+  person: ['AAAH!', 'ASTAGA ZEUS!', 'MAMAAA!', 'WAAA!', 'HAMPIR!'],
+  sheep: ['MBEEE!', 'BAAA!'],
+  chicken: ['PETOK!', 'KOKOK!'],
+  goat: ['MBEK!', 'MEEEH!'],
+};
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export class EventFx {
@@ -48,6 +55,27 @@ export class EventFx {
       this.juice.shake(tier ? 0.3 : 0.15);
     });
     on('day_start', () => this.skids.clear());
+    // Penghuni map: hanya diberi efek kalau dekat van (di layar).
+    const near = (e, r = 45) => Math.hypot(e.x - this.game.car.x, e.z - this.game.car.z) < r;
+    const groundY = (e) => this.game.world.heightAt(e.x, e.z);
+    on('npc_bumped', (e) => {
+      const y = groundY(e);
+      this.popups.spawn(pick(ANGRY), e.x, y + 3.5, e.z, 'angry', 1.1);
+      this.particles.burst(10, { x: e.x, y: y + 1, z: e.z, speed: 5, up: 4, life: 0.4, size: 0.25, color: '#ffb347', gravity: 15 });
+    });
+    on('npc_honk', (e) => {
+      if (near(e, 35)) this.popups.spawn(e.kind === 'rival' ? 'TIN TIN TIN!' : 'TIN!', e.x, groundY(e) + 3, e.z, 'honk', 0.7);
+    });
+    on('npc_dodge', (e) => {
+      if (!near(e)) return;
+      this.popups.spawn(pick(DODGE_WORDS[e.kind] ?? DODGE_WORDS.person), e.x, groundY(e) + 2.6, e.z, e.kind === 'person' ? 'scream' : 'animal', 0.8);
+    });
+    on('npc_zapped', (e) => {
+      if (!near(e)) return;
+      const y = groundY(e);
+      this.popups.spawn(e.kind === 'sheep' ? 'BAAA?' : 'ZAP!', e.x, y + 2.5, e.z, 'zap', 0.8);
+      this.particles.burst(6, { x: e.x, y: y + 1, z: e.z, speed: 1.5, up: 2, life: 1, size: 0.6, grow: 1.5, color: '#4a4a4a', drag: 2 });
+    });
     on('cargo_full', () => {
       const c = at();
       this.popups.spawn('PENUH!', c.x, c.y + 4, c.z, 'warn', 0.8);

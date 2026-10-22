@@ -338,9 +338,9 @@ export function createWorld() {
 
   // Area beraspal (distrik), lalu vegetasi di sisa daratan.
   const paved = [
-    { cx: CITY.x, cz: CITY.z, rx: U(185) + 9, rz: U(225) + 9 },
-    { cx: HOUSING.x, cz: HOUSING.z, rx: U(150) + 8, rz: U(165) + 8 },
-    { cx: PALACE.x, cz: PALACE.z, rx: PALACE_RING_R + 10, rz: PALACE_RING_R + 10 },
+    { district: 'city', cx: CITY.x, cz: CITY.z, rx: U(185) + 9, rz: U(225) + 9 },
+    { district: 'housing', cx: HOUSING.x, cz: HOUSING.z, rx: U(150) + 8, rz: U(165) + 8 },
+    { district: 'palace', cx: PALACE.x, cz: PALACE.z, rx: PALACE_RING_R + 10, rz: PALACE_RING_R + 10 },
   ];
   const buildingGrid = new ColliderGrid(colliders);
   const vegetation = generateVegetation({

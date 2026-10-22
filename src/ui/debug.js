@@ -32,6 +32,14 @@ export function createDebugPanel(game, { visible, audio }) {
   gui.add(game, 'timeScale', 0.25, 8, 0.25).name('Time scale');
   gui.add(game, 'god').name('God mode (tanpa damage)');
   gui.add(game.car, 'driftEnabled').name('Drift / handbrake (H)').listen();
+  const npc = gui.addFolder('Penghuni map (NPC)');
+  npc.add(game, 'npcEnabled').name('Semua NPC').onChange((on) => game.setNpcEnabled(on));
+  const c = game.cfg.npc;
+  npc.add(c.traffic, 'enabled').name('Lalu lintas').onChange(() => game.resetNpcs());
+  npc.add(c.pedestrians, 'enabled').name('Pejalan kaki').onChange(() => game.resetNpcs());
+  npc.add(c.animals, 'enabled').name('Hewan').onChange(() => game.resetNpcs());
+  npc.add(c.birds, 'enabled').name('Burung');
+  npc.close();
   for (const key of Object.keys(state)) if (key !== 'info') gui.add(state, key);
   if (audio) {
     const sound = gui.addFolder('Suara (M = mute)');

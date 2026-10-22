@@ -52,6 +52,7 @@ URL bisa diberi parameter:
 |---|---|
 | `?seed=123` | Run deterministik: spawn paket dan petir sama persis setiap kali |
 | `?debug=1` | Panel debug langsung terbuka (bisa juga dibuka dengan tombol <kbd>`</kbd>) |
+| `?npc=0` | Map tanpa penghuni (tanpa lalu lintas, pejalan kaki, hewan, burung) |
 | `?drift=0` | Drift/handbrake mati (setir normal). `?drift=1` menyalakannya |
 
 ## Kontrol
@@ -66,6 +67,31 @@ URL bisa diberi parameter:
 | <kbd>Esc</kbd> | Pause (ada tombol unduh log playtest) |
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
+
+## Penghuni map
+
+Supaya map terasa hidup, ada penghuni yang bergerak sendiri. Semua angkanya ada di blok `npc` di [`src/config.js`](src/config.js).
+
+| Penghuni | Tempat | Perilaku |
+|---|---|---|
+| **Lalu lintas** (±30 kendaraan) | Semua jalan aspal | Ada mobil warga, kereta kuda, truk sayur Demeter, dan van saingan ungu **Iris Express** yang suka klakson. Di jalan gunung ada gerobak kambing. Mobil jalan di lajur kanan, mengerem untuk halangan di depan, dan melambat di tikungan. Kalau van parkir di lajur, mobil di belakangnya klakson "TIN!" lalu **menyalip** |
+| **Pejalan kaki** (±50 orang berjubah) | Trotoar kota, perumahan, istana | Berjalan, berhenti, dan kadang menyeberang (mobil mengerem untuknya) |
+| **Domba** | Ladang selatan dan Gubuk Gembala | Merumput berkelompok, lalu kabur "MBEEE!" saat van mendekat |
+| **Ayam** | Perumahan dan ladang | Mematuk, menyeberang jalan, dan panik zig-zag "PETOK!" |
+| **Kambing** | Teras lereng gunung | Merumput, lalu kabur melompat |
+| **Burung** | Merpati di alun-alun dan Gerbang Istana, camar di pantai | Mematuk tanah, lalu berhamburan terbang saat van lewat |
+
+- **Menabrak mobil NPC** dihitung sebagai tabrakan biasa: biaya repair kecil sesuai kecepatan tumbukan. Mobil NPC terpental dan berputar, sopirnya marah ("WOI!", "PAKAI MATA!"), lalu mobil itu kembali ke lajurnya.
+- **Pejalan kaki dan hewan tidak bisa tertabrak.** Mereka selalu sempat melompat ke samping sambil berteriak ("AAAH!", "ASTAGA ZEUS!"), lalu duduk kaget sebentar. Orang atau hewan yang diam di jalan akan diklakson mobil NPC sampai minggir.
+- **Saat badai Zeus:**
+  - Sebagian besar mobil pulang dan orang berlari masuk rumah, jadi kota sepi.
+  - Petir bisa menyambar mobil NPC dan domba. Mereka hangus sebentar, tanpa damage.
+- **Suara:** klakson, teriakan, embik, petok, dan kepak sayap. Semuanya hanya terdengar di dekat van. Saat van di distrik ramai ada gumam kota yang pelan.
+- **Bisa dimatikan:** `?npc=0`, atau folder "Penghuni map" di panel debug (bisa per jenis).
+- **Teknis:**
+  - NPC memakai RNG sendiri, jadi `?seed=` tetap menghasilkan paket dan petir yang sama.
+  - Simulasi NPC sekitar 0,2 ms per step.
+  - Semua NPC digambar dengan InstancedMesh.
 
 ## Drift & handbrake
 
@@ -180,6 +206,9 @@ src/
     geometry.js    helper polyline/polygon
     collision.js   collider kotak berotasi, dinding kapsul, lingkaran + grid spasial
     car.js         driving arcade, handbrake/drift + mini-turbo, tanjakan, collision, impuls
+    lanes.js       lajur mobil (loop per jalan) dan trotoar untuk NPC
+    traffic.js     lalu lintas NPC: ikut lajur, mengerem, menyalip, terpental saat ditabrak
+    crowd.js       pejalan kaki & hewan: berjalan, menyeberang, menghindar, kabur, pulang saat badai
     minotaurs.js   AI Minotaur: berkeliaran → ancang-ancang → menyeruduk → pusing (+ mode Ares/Aphrodite)
     curses.js      definisi 5 curse, gabungan efek dari cargo, dan tampilan tiap tipe paket
     clock.js       jam dan fase hari
@@ -188,7 +217,7 @@ src/
     damage.js      catatan damage dan state visual
     run.js         struktur 7 hari, quota, laporan
     events.js      event bus + telemetri playtest
-  render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur,
+  render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur, NPC & burung,
                    juice (shake/hitstop/zoom), particle pool, teks melayang, efek per event
   audio/           WebAudio: synth, resep SFX, mesin van, musik prosedural
   ui/              HUD, minimap, layar intro/laporan/menang/pause, panel debug
