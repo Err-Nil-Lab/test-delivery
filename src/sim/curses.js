@@ -89,5 +89,7 @@ export function packageLook(pkg) {
     const c = CURSES[pkg.curse];
     return { color: c.color, icon: c.icon, name: `${c.god} · ${c.title}` };
   }
+  if (pkg.type === 'fragile') return { color: '#7dd3fc', icon: '🏺', name: 'Rapuh' };
+  if (pkg.type === 'express') return { color: '#fb923c', icon: '⏱️', name: 'Kilat' };
   return { color: '#e9edf5', icon: '', name: 'Safe' };
 }

@@ -246,6 +246,28 @@ kbd {
   font-size: 18px;
 }
 
+.hud-cargo .slot.fragile,
+.hud-cargo .slot.express {
+  gap: 3px;
+  font-size: 15px;
+}
+
+.hud-cargo .slot small {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hud-cargo .slot small.urgent {
+  color: #b91c1c;
+  animation: urgent 0.5s steps(2) infinite;
+}
+
+@keyframes urgent {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .hud-cargo .slot.empty {
   background: transparent;
   border: 2px dashed rgba(255, 255, 255, 0.25);
@@ -358,6 +380,11 @@ kbd {
 
 .hud-toast.money {
   color: var(--green);
+  font-weight: 700;
+}
+
+.hud-toast.loss {
+  color: var(--red);
   font-weight: 700;
 }
 
@@ -628,6 +655,20 @@ summary {
 
 .tag.curse small {
   color: rgba(255, 255, 255, 0.85);
+}
+
+.tag.fragile,
+.tag.express {
+  color: #1a1a1a;
+}
+
+.tag small.variant {
+  font-weight: 800;
+}
+
+.tag.fragile small,
+.tag.express small {
+  color: rgba(20, 20, 20, 0.8);
 }
 
 .tag small.curse-name {
@@ -1044,4 +1085,99 @@ body.desaturate #app canvas {
   .zeus-live {
     animation: none;
   }
+}
+
+/* ---------- Combo bonus gaya ---------- */
+.hud-combo {
+  position: absolute;
+  left: 50%;
+  bottom: 104px;
+  transform: translateX(-50%) scale(0.9);
+  min-width: 200px;
+  padding: 8px 14px 10px;
+  border-radius: 12px;
+  background: var(--panel);
+  text-align: center;
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.hud-combo.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.hud-combo .tricks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  font: 800 12px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hud-combo .total {
+  margin-top: 2px;
+  font: 900 24px/1.1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--green);
+}
+
+.hud-combo .total b {
+  color: var(--zeus);
+}
+
+.hud-combo .bar {
+  height: 4px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.hud-combo .bar i {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+
+.popup.trick {
+  color: #86efac;
+  font-size: 18px;
+  font-style: italic;
+}
+
+.popup.tip {
+  color: var(--green);
+  font-size: 26px;
+}
+
+/* ---------- Pengaturan ---------- */
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 16px;
+  text-align: left;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.setting input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--green);
+}
+
+.setting input[type='range'] {
+  width: 160px;
+  accent-color: var(--green);
 }

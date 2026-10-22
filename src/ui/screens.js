@@ -1,6 +1,7 @@
 // Layar overlay: intro, laporan akhir hari, menang, dan pause.
 import { formatHour } from '../sim/clock.js';
 import { DAMAGE_LABELS } from '../sim/damage.js';
+import { SETTINGS_FIELDS } from './settings.js';
 
 const money = (v) => (v < 0 ? `−$${Math.abs(v)}` : `$${v}`);
 
@@ -53,8 +54,10 @@ export class Screens {
       <ul class="controls">
         <li><kbd>W</kbd><kbd>S</kbd> gas & rem/mundur · <kbd>A</kbd><kbd>D</kbd> belok</li>
         <li><kbd>Space</kbd> handbrake: ngepot, drift lama = turbo · <kbd>H</kbd> drift on/off</li>
+        <li>Aksi berani (drift, nyaris kena petir, nyalip tipis, terbang) = <b>tip</b>. Kena damage = combo hangus</li>
+        <li>Ikuti panah GPS di jalan · <kbd>G</kbd> GPS on/off · <kbd>Esc</kbd> pause &amp; pengaturan</li>
         <li>Berhenti di penanda + <kbd>E</kbd> untuk ambil dan antar paket</li>
-        <li>Pulang ke HQ + <kbd>E</kbd> untuk mengakhiri hari · <kbd>Esc</kbd> pause</li>
+        <li>Pulang ke HQ + <kbd>E</kbd> untuk mengakhiri hari</li>
       </ul>
       <button data-action="start" data-primary>Mulai (Enter)</button>`,
       { start: onStart },
@@ -80,6 +83,7 @@ export class Screens {
       <h2>Day ${report.day}</h2>
       <table class="report-table">
         <tr><td>Income (${report.deliveredCount} paket)</td><td data-count="${report.income}">${money(report.income)}</td></tr>
+        ${report.tips ? `<tr><td>Tip gaya 🛞</td><td data-count="${report.tips}">${money(report.tips)}</td></tr>` : ''}
         <tr><td>Damage loss (repair)</td><td data-count="${-report.damageLoss}">${money(-report.damageLoss)}</td></tr>
         <tr><td>Undelivered offering${undeliveredNote}</td><td data-count="${-report.undeliveredLoss}">${money(-report.undeliveredLoss)}</td></tr>
         ${report.towed ? `<tr><td>Biaya derek</td><td>${money(-report.towFee)}</td></tr>` : ''}
@@ -123,14 +127,31 @@ export class Screens {
     );
   }
 
-  showPause({ onResume, onRestart, onDownload }) {
+  showPause({ onResume, onRestart, onDownload, onSettings }) {
     this.show(
       'pause',
       `<h2>Pause</h2>
       <button data-action="resume" data-primary>Lanjut (Enter / Esc)</button>
+      <button data-action="settings" class="secondary">Pengaturan</button>
       <button data-action="restart" class="secondary">Ulang run dari Day 1</button>
       <button data-action="download" class="secondary">Unduh log playtest</button>`,
-      { resume: onResume, restart: onRestart, download: onDownload },
+      { resume: onResume, settings: onSettings, restart: onRestart, download: onDownload },
     );
+  }
+
+  showSettings(settings, { onChange, onBack }) {
+    const rows = SETTINGS_FIELDS.map((f) => {
+      const hint = f.hint ? ` <kbd>${f.hint}</kbd>` : '';
+      if (f.type === 'toggle') {
+        return `<label class="setting"><span>${f.label}${hint}</span><input type="checkbox" data-key="${f.key}" ${settings[f.key] ? 'checked' : ''}></label>`;
+      }
+      return `<label class="setting"><span>${f.label}</span><input type="range" min="0" max="1" step="0.05" data-key="${f.key}" value="${settings[f.key]}"></label>`;
+    }).join('');
+    this.show('settings', `<h2>Pengaturan</h2><div class="settings">${rows}</div><button data-action="back" data-primary>Kembali (Enter)</button>`, { back: onBack });
+    for (const input of this.overlay.querySelectorAll('input[data-key]')) {
+      const key = input.dataset.key;
+      const read = () => (input.type === 'checkbox' ? input.checked : Number(input.value));
+      input.addEventListener(input.type === 'checkbox' ? 'change' : 'input', () => onChange(key, read()));
+    }
   }
 }

@@ -8,7 +8,7 @@ export const RUN_STATE = {
 };
 
 // Laporan akhir hari. Profit ≥ quota → lanjut, selain itu game over.
-export function computeReport({ day, quota, delivered, damageEvents, carried, penaltyRate, towFee = 0, endHour }) {
+export function computeReport({ day, quota, delivered, damageEvents, carried, penaltyRate, towFee = 0, endHour, tips = 0 }) {
   const income = delivered.reduce((sum, p) => sum + p.pay, 0);
   const damageLoss = damageEvents.reduce((sum, e) => sum + e.cost, 0);
   const undelivered = carried.map((p) => ({
@@ -19,12 +19,13 @@ export function computeReport({ day, quota, delivered, damageEvents, carried, pe
     penalty: Math.round(p.pay * penaltyRate),
   }));
   const undeliveredLoss = undelivered.reduce((sum, p) => sum + p.penalty, 0);
-  const profit = income - damageLoss - undeliveredLoss - towFee;
+  const profit = income + tips - damageLoss - undeliveredLoss - towFee;
   return {
     day,
     quota,
     income,
     deliveredCount: delivered.length,
+    tips,
     damageLoss,
     damageEvents: damageEvents.map((e) => ({ ...e })),
     undelivered,

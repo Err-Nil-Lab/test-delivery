@@ -74,9 +74,11 @@ export class MarkersView {
 
     const icon = look.icon ? `${look.icon} ` : '';
     const slots = pkg.slots > 1 ? ` · ${pkg.slots} slot` : '';
-    const curse = pkg.type === 'curse' ? `<small class="curse-name">${look.name}</small>` : '';
+    let curse = pkg.type === 'curse' ? `<small class="curse-name">${look.name}</small>` : '';
+    if (pkg.type === 'fragile') curse = '<small class="variant">Rapuh: retak tiap benturan</small>';
+    if (pkg.type === 'express') curse = `<small class="variant">Kilat: ${pkg.timeLimit} detik</small>`;
     const label = tag(`<b>${icon}$${pkg.pay}</b>${curse}<small>→ ${pkg.dest.name}${slots}</small>`, pkg.type);
-    if (pkg.type === 'curse') label.element.style.background = color;
+    if (pkg.type === 'curse' || pkg.type === 'fragile' || pkg.type === 'express') label.element.style.background = color;
     if (pkg.type === 'smuggle') label.element.innerHTML = `<b>${icon}$${pkg.pay}</b><small class="scam">scam ${Math.round(pkg.scamChance * 100)}%</small><small>→ ${pkg.dest.name}</small>`;
     label.position.y = special ? 6 : 4.5;
     group.add(label);

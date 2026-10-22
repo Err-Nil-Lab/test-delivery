@@ -55,6 +55,37 @@ export class EventFx {
       this.juice.shake(tier ? 0.3 : 0.15);
     });
     on('day_start', () => this.skids.clear());
+    // Bonus gaya dan paket rapuh.
+    // Beberapa aksi sekaligus: teks ditumpuk ke atas supaya tidak saling menimpa.
+    this.trickStack = { t: -1, n: 0 };
+    on('style_trick', ({ name, value, mult }) => {
+      const c = at();
+      const now = performance.now() / 1000;
+      this.trickStack.n = now - this.trickStack.t < 0.6 ? this.trickStack.n + 1 : 0;
+      this.trickStack.t = now;
+      this.popups.spawn(`${name} +$${value}${mult > 1 ? ` ×${mult}` : ''}`, c.x, c.y + 4.5 + this.trickStack.n * 1.6, c.z, 'trick', 0.9);
+    });
+    on('style_banked', ({ tip }) => {
+      const c = at();
+      this.popups.spawn(`+$${tip} TIP!`, c.x, c.y + 5, c.z, 'tip', 1.2);
+      this.particles.burst(Math.min(30, 8 + Math.round(tip / 5)), { ...c, y: c.y + 2, speed: 4, up: 8, life: 0.9, size: 0.4, color: GOLD, gravity: 16 });
+      this.juice.kick(0.025);
+    });
+    on('style_dropped', () => {
+      const c = at();
+      this.popups.spawn('COMBO HANGUS', c.x, c.y + 4.5, c.z, 'loss', 1);
+    });
+    on('fragile_cracked', () => {
+      const c = at();
+      this.popups.spawn('KRAK!', c.x, c.y + 3.8, c.z, 'warn', 0.8);
+      this.particles.burst(8, { ...c, y: c.y + 2.4, speed: 3, up: 3, life: 0.5, size: 0.2, color: '#bfe8ff', gravity: 14 });
+    });
+    on('fragile_broken', () => {
+      const c = at();
+      this.popups.spawn('PRANG!!', c.x, c.y + 4, c.z, 'loss', 1.1);
+      this.particles.burst(22, { ...c, y: c.y + 2.4, speed: 6, up: 5, life: 0.7, size: 0.25, color: '#bfe8ff', gravity: 16 });
+      this.juice.shake(0.25);
+    });
     // Penghuni map: hanya diberi efek kalau dekat van (di layar).
     const near = (e, r = 45) => Math.hypot(e.x - this.game.car.x, e.z - this.game.car.z) < r;
     const groundY = (e) => this.game.world.heightAt(e.x, e.z);

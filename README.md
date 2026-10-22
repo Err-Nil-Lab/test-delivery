@@ -64,10 +64,50 @@ URL bisa diberi parameter:
 | <kbd>A</kbd> / <kbd>D</kbd> | Belok |
 | <kbd>Space</kbd> (tahan) | Handbrake: van ngepot/drift. Drift lama lalu lepas = turbo |
 | <kbd>H</kbd> | Drift on/off (diingat di browser) |
+| <kbd>G</kbd> | GPS on/off |
 | <kbd>E</kbd> | Berhenti di penanda, lalu ambil/antar paket. Di HQ: akhiri hari |
-| <kbd>Esc</kbd> | Pause (ada tombol unduh log playtest) |
+| <kbd>Esc</kbd> | Pause: **Pengaturan**, ulang run, unduh log playtest |
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
+
+## GPS, bonus gaya, paket Rapuh & Kilat, Pengaturan
+
+**GPS** (<kbd>G</kbd>):
+- Chevron berwarna mengalir di aspal dari van ke tujuan aktif, plus garis putus-putus di minimap.
+- Rute dicari lewat graf jalan dengan A* ([`src/sim/navigation.js`](src/sim/navigation.js)). Ke gubuk di lereng, rute disambung dari jalan yang tidak lebih rendah dari gubuknya.
+- Urutan tujuan:
+  1. Badai: HQ (biru).
+  2. Paket Kilat (oranye).
+  3. Tujuan paket terdekat (hijau; kuning untuk Zeus).
+  4. Paket Zeus di Day 1.
+  5. Senja: HQ.
+  6. Selain itu: paket terdekat untuk diambil (putih).
+
+**Bonus gaya** (tip, [`src/sim/style.js`](src/sim/style.js)):
+
+| Aksi | Tip |
+|---|---|
+| DRIFT (≥ 0,7 detik) | $10 per detik |
+| NYARIS! (petir jatuh dekat tapi meleset) | $10 |
+| NYALIP TIPIS (lewat < ±1,6 m dari mobil NPC dengan kecepatan ≥ 14) | $6 |
+| TERBANG (melayang dari undakan ≥ 0,45 detik) | $14 per detik |
+| OLÉ! (seruduk Minotaur meleset tipis) | $20 |
+
+- **Combo:** aksi beruntun dalam 3 detik menaikkan pengali (×1,5, ×2, … sampai ×3). Meter combo tampil di bawah tengah layar. Combo dibayar saat jendela habis.
+- **Combo hangus** kalau van kena damage dulu (tabrakan, mendarat keras, seruduk, petir, ledakan scam).
+- Tip masuk ke "Hari ini" di HUD dan jadi baris **Tip gaya** di laporan, jadi ikut dihitung untuk quota.
+
+**Paket baru** (muncul sejak Day 1 dan dijamin ada di awal hari):
+
+| Paket | Bayaran | Catatan |
+|---|---|---|
+| **Rapuh** 🏺 | ×1,6 | Retak tiap benturan: bayaran turun sepertiga ("KRAK!"). 3 kali = **PECAH** dan hangus. HUD menampilkan sisa bayarannya |
+| **Kilat** ⏱️ | ×1,7 | Batas waktu sejak diambil (tertulis di label, misalnya "Kilat: 14 detik"). Hitung mundur ada di slot cargo, dengan detak di 5 detik terakhir. **Telat = bayaran tinggal setengah** |
+
+**Pengaturan** (<kbd>Esc</kbd> → Pengaturan):
+- Toggle: GPS, drift, penghuni map, Zeus LIVE, kurangi guncangan kamera.
+- Slider volume: utama, musik, efek.
+- Disimpan di browser. Parameter URL tetap bisa dipakai, berlaku untuk sesi itu saja, dan tidak ikut tersimpan.
 
 ## Zeus LIVE
 
@@ -226,6 +266,8 @@ src/
     geometry.js    helper polyline/polygon
     collision.js   collider kotak berotasi, dinding kapsul, lingkaran + grid spasial
     car.js         driving arcade, handbrake/drift + mini-turbo, tanjakan, collision, impuls
+    navigation.js  GPS: graf jalan + A*, pemilihan tujuan aktif
+    style.js       bonus gaya: aksi berani → combo → tip
     lanes.js       lajur mobil (loop per jalan) dan trotoar untuk NPC
     traffic.js     lalu lintas NPC: ikut lajur, mengerem, menyalip, terpental saat ditabrak
     crowd.js       pejalan kaki & hewan: berjalan, menyeberang, menghindar, kabur, pulang saat badai

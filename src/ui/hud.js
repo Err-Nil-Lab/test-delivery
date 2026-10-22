@@ -33,6 +33,8 @@ export class Hud {
     this.promptEl = el('div', 'hud-prompt', this.root);
     this.bannerEl = el('div', 'hud-banner', this.root);
     this.toastsEl = el('div', 'hud-toasts', this.root);
+    // Combo bonus gaya: daftar aksi, total × pengali, dan bar sisa waktu.
+    this.comboEl = el('div', 'hud-combo', this.root);
     this.arrowsEl = el('div', 'hud-arrows', this.root);
     this.vignetteEl = el('div', 'hud-vignette', this.root);
     el('div', 'hud-storm-edge', this.root);
@@ -57,6 +59,20 @@ export class Hud {
       this.toast(`+$${pay} · ${dest}`, 'money');
       this.pulse(this.moneyEl, 'bump');
     });
+    bus.on('fragile_cracked', ({ lost }) => {
+      this.toast(`🏺 Retak! Bayaran −$${lost}`, 'loss', 1.8);
+      this.pulse(this.cargoEl, 'shake');
+    });
+    bus.on('fragile_broken', ({ lost }) => {
+      this.banner('🏺 PECAH!', `Paket rapuh hancur. $${lost} melayang.`, 'lost', 2.2);
+      this.pulse(this.cargoEl, 'shake');
+    });
+    bus.on('express_late', ({ pay }) => this.toast(`⏱️ Telat! Bayaran tinggal $${pay}`, 'loss', 2.2));
+    bus.on('style_banked', ({ tip, count }) => {
+      this.toast(`🛞 Tip gaya +$${tip}${count > 1 ? ` (combo ×${count})` : ''}`, 'money', 1.8);
+      this.pulse(this.moneyEl, 'bump');
+    });
+    bus.on('style_dropped', ({ lost }) => this.toast(`💥 Combo hangus (−$${lost})`, 'loss', 1.8));
     bus.on('pickup', ({ packageType, curse, dest }) => {
       this.pulse(this.cargoEl, 'bump');
       const look = packageLook({ type: packageType, curse });
@@ -156,6 +172,20 @@ export class Hud {
     return '';
   }
 
+  updateCombo() {
+    const { style } = this.game;
+    const combo = style.combo;
+    this.comboEl.classList.toggle('show', Boolean(combo));
+    if (!combo) return;
+    const names = combo.tricks.slice(-4).map((t) => `<span>${t.name} +$${t.value}</span>`).join('');
+    const mult = style.multiplier;
+    const left = Math.max(0, combo.timer / style.cfg.comboWindow);
+    this.setHtml(
+      this.comboEl,
+      `<div class="tricks">${names}</div><div class="total">$${combo.total}${mult > 1 ? ` <b>×${mult}</b>` : ''}</div><div class="bar"><i style="width:${(left * 100).toFixed(0)}%"></i></div>`,
+    );
+  }
+
   updateDarkness(radius) {
     this.darknessEl.style.opacity = radius ? '1' : '0';
     if (!radius) return;
@@ -230,13 +260,21 @@ export class Hud {
     this.setText(this.dayEl, `DAY ${run.day} / ${game.cfg.run.days}`);
     this.setHtml(this.clockEl, `${formatHour(clock.hour)} <span>${PHASE_ICONS[clock.phase]}</span>`);
     this.clockEl.dataset.phase = clock.phase;
-    this.setHtml(this.moneyEl, `Hari ini <b>$${packages.income}</b> · Quota <b>$${run.quota}</b>`);
+    this.setHtml(this.moneyEl, `Hari ini <b>$${packages.income + game.style.tips}</b> · Quota <b>$${run.quota}</b>`);
+    this.updateCombo();
 
     const slots = [];
     for (const p of packages.cargo) {
       const look = packageLook(p);
-      const style = p.type === 'curse' || p.type === 'smuggle' ? `;background:${look.color}` : '';
-      slots.push(`<span class="slot ${p.type}" style="flex:${p.slots}${style}">${look.icon || '$' + p.pay}</span>`);
+      const colored = p.type === 'curse' || p.type === 'smuggle' || p.type === 'fragile' || p.type === 'express';
+      const style = colored ? `;background:${look.color}` : '';
+      let content = look.icon || '$' + p.pay;
+      if (p.type === 'fragile') content = `${look.icon}<small>$${p.pay}</small>`;
+      if (p.type === 'express') {
+        const urgent = !p.late && p.timeLeft <= 8;
+        content = `${look.icon}<small class="${urgent ? 'urgent' : ''}">${p.late ? 'telat' : `${Math.ceil(p.timeLeft)}s`}</small>`;
+      }
+      slots.push(`<span class="slot ${p.type}" style="flex:${p.slots}${style}">${content}</span>`);
     }
     for (let i = 0; i < packages.slotsFree; i++) slots.push('<span class="slot empty" style="flex:1"></span>');
     this.setHtml(this.cargoEl, slots.join(''));

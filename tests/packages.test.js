@@ -120,6 +120,6 @@ describe('Paket dan cargo', () => {
   it('sejak Day 1 semua jenis paket langsung ada di map', () => {
     const game = newGame();
     const types = new Set(game.packages.waiting.map((p) => p.type));
-    expect([...types].sort()).toEqual(['curse', 'safe', 'smuggle', 'zeus']);
+    for (const t of ['zeus', 'curse', 'smuggle', 'fragile', 'express']) expect(types.has(t), t).toBe(true);
   });
 });
