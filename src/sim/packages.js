@@ -36,13 +36,16 @@ export class PackageSystem {
       this.waiting.push(zeus);
       this.zeusSpawnedToday += 1;
     }
+    // Hari biasa: undian paket Zeus di awal hari (sebelum jatah paket awal habis oleh paket khusus).
+    if (!scripted && this.canSpawnZeus() && this.rng.chance(this.cfg.zeus.chance)) this.spawnAt('zeus', this.world.zeusPickup);
     if (near) this.spawnNear(near);
     // Semua jenis paket langsung terlihat sejak awal hari.
     if (this.cfg.guaranteeSpecialAtStart) {
       if (this.canSpawnCurse()) this.spawnCurse();
-      if (this.canSpawnSmuggle()) {
+      for (const type of ['smuggle', 'fragile', 'express']) {
+        if (type === 'smuggle' ? !this.canSpawnSmuggle() : !this.canSpawnVariant(type)) continue;
         const free = this.freePoints();
-        if (free.length) this.spawnAt('smuggle', this.rng.pick(free));
+        if (free.length) this.spawnAt(type, this.rng.pick(free));
       }
     }
     while (this.waiting.length < this.cfg.initialWaiting) {
@@ -73,7 +76,19 @@ export class PackageSystem {
 
   update(dt, car, hour) {
     for (const p of this.waiting) p.age += dt;
-    for (const p of this.cargo) p.held = (p.held ?? 0) + dt;
+    for (const p of this.cargo) {
+      p.held = (p.held ?? 0) + dt;
+      if (p.type === 'express' && !p.late) {
+        p.timeLeft -= dt;
+        if (p.timeLeft <= 0) {
+          // Telat: bayaran tinggal sebagian.
+          p.late = true;
+          p.timeLeft = 0;
+          p.pay = round5(p.basePay * this.cfg.express.latePay);
+          this.bus.emit('express_late', { id: p.id, pay: p.pay, hour });
+        }
+      }
+    }
     const expired = this.waiting.filter((p) => p.age >= p.lifetime);
     if (expired.length) {
       this.waiting = this.waiting.filter((p) => p.age < p.lifetime);
@@ -148,7 +163,11 @@ export class PackageSystem {
       const pkg = this.spawnAt('smuggle', this.rng.pick(candidates));
       if (pkg) return pkg;
     }
-    return this.spawnAt('safe', this.rng.pick(candidates));
+    return this.spawnAt(allowZeus ? this.pickVariant() : 'safe', this.rng.pick(candidates));
+  }
+
+  canSpawnVariant(type) {
+    return this.waiting.filter((p) => p.type === type).length < this.cfg[type].maxWaiting;
   }
 
   canSpawnSmuggle() {
@@ -163,7 +182,15 @@ export class PackageSystem {
       return d >= this.cfg.nearMinDistance && d <= this.cfg.nearRadius;
     });
     if (!candidates.length) return null;
-    return this.spawnAt('safe', this.rng.pick(candidates));
+    return this.spawnAt(this.pickVariant(), this.rng.pick(candidates));
+  }
+
+  // Paket biasa kadang berupa varian Rapuh atau Kilat.
+  pickVariant() {
+    for (const type of ['fragile', 'express']) {
+      if (this.canSpawnVariant(type) && this.rng.chance(this.cfg[type].chance)) return type;
+    }
+    return 'safe';
   }
 
   spawnAt(type, point, curse = null) {
@@ -209,6 +236,16 @@ export class PackageSystem {
       if (!dest) return null;
       pay = round5(Math.min(c.maxPay, (this.cfg.safe.basePay + this.cfg.safe.payPerUnit * distance(pickup, dest)) * c.payMultiplier));
       slots = c.slots;
+    } else if (type === 'fragile' || type === 'express') {
+      const v = this.cfg[type];
+      dest = this.pickDestination(pickup, this.cfg.minTripDistance);
+      if (!dest) return null;
+      pay = round5(Math.min(v.maxPay, this.safePay(pickup, dest) * v.payMultiplier));
+      slots = this.cfg.safe.slots;
+      const pkg = { ...this.basePackage(type, pickup, dest, pay, slots), basePay: pay };
+      if (type === 'fragile') pkg.condition = 1;
+      else pkg.timeLimit = Math.round(v.baseSeconds + v.secondsPerUnit * distance(pickup, dest));
+      return pkg;
     } else {
       dest = this.pickDestination(pickup, this.cfg.minTripDistance);
       if (!dest) return null;
@@ -282,11 +319,39 @@ export class PackageSystem {
     const pkg = action.pkg;
     this.waiting = this.waiting.filter((p) => p !== pkg);
     pkg.held = 0;
+    if (pkg.type === 'express') pkg.timeLeft = pkg.timeLimit;
     this.cargo.push(pkg);
     this.bus.emit('pickup', { id: pkg.id, packageType: pkg.type, curse: pkg.curse, pay: pkg.pay, dest: pkg.dest.name, hour });
     if (pkg.type === 'zeus') this.bus.emit('blessing_gained', { hour });
     if (pkg.type === 'curse') this.bus.emit('curse_gained', { curse: pkg.curse, hour });
     return action;
+  }
+
+  // Van kena benturan (tabrakan, mendarat keras, seruduk, petir, ledakan): paket rapuh retak.
+  // Retak terus sampai habis = pecah dan hilang dari cargo.
+  jolt(source, hour) {
+    for (const pkg of this.cargo.filter((p) => p.type === 'fragile')) {
+      pkg.condition = Math.max(0, pkg.condition - this.cfg.fragile.lossPerHit);
+      const lost = pkg.pay;
+      if (pkg.condition <= 0.01) {
+        this.cargo = this.cargo.filter((p) => p !== pkg);
+        this.bus.emit('fragile_broken', { id: pkg.id, lost, source, hour });
+        continue;
+      }
+      pkg.pay = round5(pkg.basePay * pkg.condition);
+      this.bus.emit('fragile_cracked', { id: pkg.id, pay: pkg.pay, lost: lost - pkg.pay, condition: Math.round(pkg.condition * 100) / 100, source, hour });
+    }
+  }
+
+  // Panel debug: paket rapuh / kilat langsung ke cargo.
+  debugGiveVariant(car, type) {
+    if (this.slotsFree < 1) return false;
+    const pkg = this.makePackage(type, { id: 'debug', name: 'Debug', x: car.x, z: car.z });
+    if (!pkg) return false;
+    pkg.held = 0;
+    if (type === 'express') pkg.timeLeft = pkg.timeLimit;
+    this.cargo.push(pkg);
+    return true;
   }
 
   // Panel debug: langsung masukkan paket selundupan ke cargo bila slot cukup.

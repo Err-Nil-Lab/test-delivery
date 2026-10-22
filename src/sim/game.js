@@ -11,6 +11,8 @@ import { HazardSystem } from './hazards.js';
 import { MinotaurSystem } from './minotaurs.js';
 import { TrafficSystem } from './traffic.js';
 import { CrowdSystem } from './crowd.js';
+import { StyleSystem } from './style.js';
+import { Navigator } from './navigation.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -33,6 +35,8 @@ export class Game {
     this.traffic = new TrafficSystem(this.world, config.npc.traffic, npcRng, this.bus);
     this.crowd = new CrowdSystem(this.world, config.npc, npcRng, this.bus);
     this.npcEnabled = config.npc.enabled;
+    this.style = new StyleSystem(config.style, this.bus);
+    this.nav = new Navigator(this.world, config.gps);
     this.run = new RunState(config.run);
     this.telemetry = new Telemetry(this.bus, () => ({
       run: this.run.runCount,
@@ -86,6 +90,7 @@ export class Game {
     this.hazards.reset();
     this.minotaurs.reset();
     this.resetNpcs();
+    this.style.reset();
     this.packages.resetDay({ scripted: run.scripted, day: run.day, near: this.car });
     this.steerHistory = [];
     this.collisionCooldown = 0;
@@ -165,6 +170,7 @@ export class Game {
       this.collisionCooldown = this.cfg.damage.collisionCooldown;
       const cost = this.god ? 0 : speed * this.cfg.damage.collisionCostPerSpeed;
       this.damage.add('collision', cost, hour);
+      this.packages.jolt('collision', hour);
       this.bus.emit('collision', { impact: round2(speed), cost: Math.round(cost) });
     }
 
@@ -192,6 +198,7 @@ export class Game {
       const source = hit.kind === 'storm' ? 'storm' : 'lightning';
       const cost = this.god ? 0 : this.cfg.damage[source];
       this.damage.add(source, cost, hour);
+      this.packages.jolt(source, hour);
       this.bus.emit('strike_hit', { kind: hit.kind, blocked: false, cost });
     }
 
@@ -211,12 +218,15 @@ export class Game {
       const side = this.rng.chance(0.5) ? 1 : -1;
       this.car.applyImpulse(ram.dirX * mcfg.knockback, ram.dirZ * mcfg.knockback, side * mcfg.knockSpin);
       this.damage.add('minotaur', this.god ? 0 : this.cfg.damage.minotaur, hour);
+      this.packages.jolt('minotaur', hour);
     }
 
     if (this.npcEnabled) {
       this.traffic.update(dt, { van: this.car, phase: this.clock.phase, walkers: this.crowd.walkers(), scare: (a, c) => this.crowd.scare(a, c) });
       this.crowd.update(dt, { van: this.car, phase: this.clock.phase });
     }
+    this.style.update(dt, { car: this.car, npcCars: this.traffic.cars });
+    this.nav.update(dt, this);
 
     while (this.pendingHints.length && this.pendingHints[0].at <= this.clock.elapsed) {
       this.bus.emit('hint', { text: this.pendingHints.shift().text });
@@ -233,6 +243,7 @@ export class Game {
     if (fallSpeed <= landingSafeSpeed) return;
     const cost = this.god ? 0 : (fallSpeed - landingSafeSpeed) * landingCostPerSpeed;
     this.damage.add('landing', cost, hour);
+    this.packages.jolt('landing', hour);
     this.bus.emit('hard_landing', { fallSpeed: round2(fallSpeed), cost: Math.round(cost) });
   }
 
@@ -243,6 +254,7 @@ export class Game {
       const angle = this.rng.range(0, Math.PI * 2);
       this.car.applyImpulse(Math.cos(angle) * s.scamKnockback, Math.sin(angle) * s.scamKnockback, this.rng.chance(0.5) ? 3 : -3);
       this.damage.add('scam', this.god ? 0 : s.scamDamage, hour);
+      this.packages.jolt('scam', hour);
     }
   }
 
@@ -286,7 +298,9 @@ export class Game {
 
   endDay({ towed = false } = {}) {
     if (this.run.state !== RUN_STATE.DAY) return null;
+    this.style.bank(); // combo yang masih berjalan tetap dibayar
     const report = computeReport({
+      tips: this.style.tips,
       day: this.run.day,
       quota: this.run.quota,
       delivered: this.packages.delivered,
@@ -299,6 +313,7 @@ export class Game {
     this.run.endDay(report);
     this.bus.emit('day_end', {
       income: report.income,
+      tips: report.tips,
       damageLoss: report.damageLoss,
       undeliveredLoss: report.undeliveredLoss,
       towFee: report.towFee,

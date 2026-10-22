@@ -2,6 +2,7 @@
 // (atas layar = barat laut), jadi kiri/kanan di minimap = kiri/kanan di layar.
 import { MINOTAUR_STATE } from '../sim/minotaurs.js';
 import { packageLook } from '../sim/curses.js';
+import { ROUTE_COLORS } from '../render/routeView.js';
 
 const SIZE = 200;
 const PAD = 8;
@@ -167,6 +168,16 @@ export class Minimap {
     ctx.clearRect(0, 0, SIZE, SIZE);
     ctx.drawImage(this.base, 0, 0, SIZE, SIZE);
 
+    // Rute GPS.
+    const { nav } = game;
+    if (nav.enabled && nav.route.length > 1) {
+      this.path(ctx, nav.route, false);
+      ctx.strokeStyle = ROUTE_COLORS[nav.target?.kind] ?? ROUTE_COLORS.dest;
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     this.dot(world.plant.dropoff.x, world.plant.dropoff.z, COLORS.plant, 3.5);
     // Hades: paket lain dan Minotaur tidak terlihat, hanya tujuan.
     const blind = Boolean(game.effects.visionRadius);

@@ -152,6 +152,7 @@ export class MinotaurSystem {
         if (m.timer <= 0) {
           m.state = MINOTAUR_STATE.CHARGE;
           m.traveled = 0;
+          m.closest = Infinity;
           this.bus.emit('minotaur_charge', { id: m.id });
         }
       } else if (m.state === MINOTAUR_STATE.CHARGE) {
@@ -159,12 +160,15 @@ export class MinotaurSystem {
         const nx = m.x + m.dirX * step;
         const nz = m.z + m.dirZ * step;
         if (!inRect(this.expand(m.territory, p.margin), nx, nz) || m.traveled >= p.chargeDistance) {
+          // Serudukan meleset tipis: dicatat untuk bonus gaya "OLÉ!".
+          if (m.closest < 10) this.bus.emit('minotaur_miss', { id: m.id, closest: Math.round(m.closest * 100) / 100 });
           this.dizzy(m);
           continue;
         }
         m.x = nx;
         m.z = nz;
         m.traveled += step;
+        m.closest = Math.min(m.closest, Math.hypot(car.x - m.x, car.z - m.z));
         if (Math.hypot(car.x - m.x, car.z - m.z) <= this.cfg.radius + car.radius) {
           hits.push({ minotaur: m, dirX: m.dirX, dirZ: m.dirZ });
           this.bus.emit('minotaur_hit', { id: m.id, x: m.x, z: m.z });

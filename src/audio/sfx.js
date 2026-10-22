@@ -26,6 +26,20 @@ export const SFX = {
     noise(c, o, { dur: 0.5, gain: 0.18, filter: 'bandpass', freq: 500, freqEnd: 3000, q: 1.5 }); // whoosh
     arpeggio(c, o, (tier ? [64, 69, 73, 76] : [69, 76]).map((n) => midi(n)), { type: 'square', dur: 0.08, gain: 0.07, step: 0.045 });
   },
+  // ---------- Bonus gaya & paket rapuh ----------
+  trick: (c, o, { count = 1 } = {}) => tone(c, o, { freq: midi(72 + Math.min(count - 1, 7) * 2), type: 'triangle', dur: 0.12, gain: 0.1 }),
+  tipBank: (c, o) => arpeggio(c, o, [midi(79), midi(84), midi(88), midi(91)], { type: 'square', dur: 0.1, gain: 0.08, step: 0.05 }),
+  comboDrop: (c, o) => tone(c, o, { freq: 330, freqEnd: 110, type: 'sawtooth', dur: 0.35, gain: 0.08 }),
+  crack: (c, o) => {
+    noise(c, o, { dur: 0.08, gain: 0.18, filter: 'highpass', freq: 3500 });
+    tone(c, o, { freq: 2400, freqEnd: 1800, type: 'sine', dur: 0.12, gain: 0.05, delay: 0.02 });
+  },
+  shatter: (c, o) => {
+    noise(c, o, { dur: 0.5, gain: 0.3, filter: 'highpass', freq: 2500, freqEnd: 5000 });
+    [0, 0.05, 0.12, 0.2].forEach((d) => tone(c, o, { freq: 1800 + Math.random() * 2000, type: 'sine', dur: 0.15, gain: 0.05, delay: d }));
+  },
+  late: (c, o) => [0, 0.18].forEach((d) => tone(c, o, { freq: 520, freqEnd: 380, type: 'square', dur: 0.15, gain: 0.07, delay: d })),
+
   // ---------- Zeus LIVE ----------
   // Gumaman "bahasa dewa": suku kata pendek bernada rendah; tertawa = "HA HA HA" turun; marah = ada guntur.
   zeusTalk: (c, o, { mood = 'smirk', syllables = 7 } = {}) => {
@@ -185,6 +199,12 @@ export const EVENT_SFX = {
   hiccup: () => ({ name: 'hiccup' }),
   takeoff: () => ({ name: 'takeoff' }),
   drift_start: () => ({ name: 'driftStart' }),
+  style_trick: ({ count }) => ({ name: 'trick', opts: { count } }),
+  style_banked: () => ({ name: 'tipBank' }),
+  style_dropped: () => ({ name: 'comboDrop' }),
+  fragile_cracked: () => ({ name: 'crack' }),
+  fragile_broken: () => ({ name: 'shatter' }),
+  express_late: () => ({ name: 'late' }),
   npc_honk: (e, game) => near(e, game, { name: 'honk', opts: { rival: e.kind === 'rival' } }),
   npc_bumped: (e, game) => near(e, game, { name: 'angryHonk' }),
   npc_dodge: (e, game) => near(e, game, { name: { person: 'scream', sheep: 'baa', goat: 'baa', chicken: 'cluck' }[e.kind] ?? 'scream' }),

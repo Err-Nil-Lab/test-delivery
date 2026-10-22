@@ -9,6 +9,7 @@ import { Screens, downloadJSON } from './ui/screens.js';
 import { createDebugPanel } from './ui/debug.js';
 import { AudioEngine } from './audio/audio.js';
 import { ZeusCam } from './ui/zeusCam.js';
+import { loadSettings, saveSettings, applySettings } from './ui/settings.js';
 
 const STEP = 1 / 60;
 const params = new URLSearchParams(window.location.search);
@@ -26,17 +27,6 @@ window.addEventListener('pointerdown', unlockAudio);
 document.addEventListener('click', (e) => {
   if (e.target.closest('.card button')) audio.play('uiClick');
 });
-// Drift/handbrake bisa dimatikan: ?drift=0 di URL, tombol H, atau panel debug. Pilihan H diingat di browser.
-const storedDrift = (() => {
-  try {
-    return localStorage.getItem('hex.drift');
-  } catch {
-    return null;
-  }
-})();
-if (params.has('drift')) game.car.driftEnabled = params.get('drift') !== '0';
-else if (storedDrift !== null) game.car.driftEnabled = storedDrift === '1';
-if (params.get('npc') === '0') game.setNpcEnabled(false);
 view.birds.onScare = (b) => {
   const d = Math.hypot(b.x - game.car.x, b.z - game.car.z);
   audio.play('flap', { vol: Math.max(0.2, 1 - d / 30) });
@@ -47,8 +37,16 @@ const zeusCam = new ZeusCam(app, game, {
   calm: params.has('calm'),
   onSpeak: (mood, text) => audio.play('zeusTalk', { mood, syllables: Math.min(10, 3 + Math.round(text.length / 6)) }),
 });
-if (params.get('zeus') === '0') zeusCam.enabled = false;
 const screens = new Screens(app);
+// Pengaturan pemain (menu di layar pause, disimpan di browser; parameter URL menimpa untuk sesi ini).
+const settings = loadSettings(game.cfg, params);
+const applyAll = () => applySettings(settings, { game, view, audio, zeusCam });
+applyAll();
+const setSetting = (key, value) => {
+  settings[key] = value;
+  saveSettings(settings, key);
+  applyAll();
+};
 createDebugPanel(game, { visible: params.has('debug'), audio, zeusCam });
 
 let paused = false;
@@ -79,10 +77,15 @@ function togglePause() {
     screens.hide();
     return;
   }
+  showPauseMenu();
+}
+
+function showPauseMenu() {
   screens.showPause({
     onResume: togglePause,
     onRestart: restartRun,
     onDownload: downloadLog,
+    onSettings: () => screens.showSettings(settings, { onChange: setSetting, onBack: showPauseMenu }),
   });
 }
 
@@ -103,13 +106,12 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') togglePause();
   if (e.code === 'KeyM') hud.toast(audio.toggleMute() ? '🔇 Suara mati (M)' : '🔊 Suara nyala (M)', '', 1.5);
   if (e.code === 'KeyH') {
-    game.car.driftEnabled = !game.car.driftEnabled;
-    try {
-      localStorage.setItem('hex.drift', game.car.driftEnabled ? '1' : '0');
-    } catch {
-      // penyimpanan diblokir: pilihan hanya berlaku sesi ini
-    }
-    hud.toast(game.car.driftEnabled ? '🛞 Drift nyala: tahan Space (H)' : '🚐 Drift mati: setir normal (H)', '', 1.8);
+    setSetting('drift', !settings.drift);
+    hud.toast(settings.drift ? '🛞 Drift nyala: tahan Space (H)' : '🚐 Drift mati: setir normal (H)', '', 1.8);
+  }
+  if (e.code === 'KeyG') {
+    setSetting('gps', !settings.gps);
+    hud.toast(settings.gps ? '🧭 GPS nyala (G)' : '🧭 GPS mati (G)', '', 1.5);
   }
 });
 

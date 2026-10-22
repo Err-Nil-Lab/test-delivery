@@ -96,6 +96,11 @@ export class AudioEngine {
     this.music.setMood(inDay ? (game.clock.phase === 'day' ? 'day' : game.clock.phase === 'dusk' ? 'dusk' : 'storm') : null);
     this.music.setModifiers({ dark: Boolean(fx.visionRadius), drunk: fx.steerDelay > 0 });
     this.music.update();
+    // Paket kilat: detak tiap detik di 5 detik terakhir.
+    const express = game.packages.cargo.find((p) => p.type === 'express' && !p.late);
+    const sec = express ? Math.ceil(express.timeLeft) : null;
+    if (inDay && sec !== null && sec <= 5 && sec !== this.lastExpressSec) this.play('tick');
+    this.lastExpressSec = sec;
     const { car, world } = game;
     const busy =
       inDay && game.npcEnabled && game.clock.phase !== 'storm' && world.paved.some((e) => ((car.x - e.cx) / e.rx) ** 2 + ((car.z - e.cz) / e.rz) ** 2 <= 1);

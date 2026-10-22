@@ -76,9 +76,9 @@ export const CONFIG = {
 
   packages: {
     capacity: 3,
-    maxWaiting: 6,
+    maxWaiting: 7,
     initialWaiting: 4,
-    guaranteeSpecialAtStart: true, // awal hari selalu ada min. 1 paket curse dan 1 selundupan (bila sudah boleh muncul)
+    guaranteeSpecialAtStart: true, // awal hari selalu ada min. 1 paket curse, selundupan, rapuh, dan kilat
     spawnInterval: 5,
     waitingLifetime: 45,
     nearRadius: 45, // selalu ada minimal 1 paket dalam radius ini
@@ -91,7 +91,36 @@ export const CONFIG = {
     undeliveredPenalty: 0.1, // TODO(GDD): −10% dari bayaran tiap paket yang masih dibawa di akhir hari
     safe: { slots: 1, basePay: 40, payPerUnit: 0.7, maxPay: 200 },
     zeus: { slots: 2, pay: 400, chance: 0.3, maxPerDay: 1 },
+    // Rapuh 🏺: bayaran besar, berkurang tiap van kena benturan (tabrakan, mendarat keras, seruduk, petir). Pecah = hangus.
+    fragile: { chance: 0.18, maxWaiting: 1, payMultiplier: 1.6, maxPay: 320, lossPerHit: 0.34 },
+    // Kilat ⏱️: batas waktu sejak diambil. Telat = bayaran tinggal sebagian.
+    express: {
+      chance: 0.18,
+      maxWaiting: 1,
+      payMultiplier: 1.7,
+      maxPay: 340,
+      baseSeconds: 8,
+      secondsPerUnit: 0.095, // detik per unit jarak lurus (sudah termasuk jalan berkelok)
+      latePay: 0.5,
+    },
   },
+
+  // Bonus gaya: aksi berani jadi tip. Aksi beruntun dalam comboWindow = pengali naik.
+  // Kena damage saat combo berjalan = combo hangus.
+  style: {
+    enabled: true,
+    comboWindow: 3,
+    multStep: 0.5,
+    maxMult: 3,
+    drift: { minSeconds: 0.7, perSecond: 10 },
+    nearMiss: { radius: 5, minSpeed: 4, value: 10 }, // petir jatuh dekat tapi meleset
+    closePass: { radius: 3.2, minSpeed: 14, value: 6, cooldown: 3 }, // nyalip/papasan tipis dengan mobil NPC
+    air: { minSeconds: 0.45, perSecond: 14 }, // terbang dari undakan
+    ole: { radius: 6, value: 20 }, // seruduk Minotaur meleset tipis
+  },
+
+  // GPS: garis rute di jalan menuju tujuan. Tombol G untuk on/off.
+  gps: { enabled: true, recompute: 0.5, nodeSpacing: 4, linkDistance: 6, offroadPenalty: 1.6 },
 
   // Kategori Chance: paket selundupan. Persentase scam terlihat sejak awal, bayaran naik sebanding.
   // Diundi saat diantar: legit = uang, scam = uang hangus + paket meledak (damage).
