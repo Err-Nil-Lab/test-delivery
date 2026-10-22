@@ -151,6 +151,12 @@ export class Hud {
       else this.hitTimer = 0.5;
     });
 
+    // Hari Pelatihan: sorot bagian HUD yang sedang dibahas, redupkan sisanya.
+    this.dimEl = el('div', 'hud-dim', this.root);
+    bus.on('tutorial_step', ({ spotlight }) => this.setSpotlight(spotlight));
+    bus.on('tutorial_done', () => this.setSpotlight(null));
+    bus.on('tutorial_done', ({ skipped }) => !skipped && this.banner('🎓 Pelatihan selesai!', 'Hari pertama yang sesungguhnya dimulai…', 'day', 2.5));
+
     // Hint tutorial: antrean sendiri, tidak tergusur toast.
     bus.on('hint', ({ text }) => this.queueHint(text));
     bus.on('day_start', () => {
@@ -158,6 +164,23 @@ export class Hud {
       this.hintTimer = 0;
       this.hintEl.classList.remove('show');
     });
+  }
+
+  // key: 'objective' | 'prompt' | 'cargo' | 'profit' | 'time' | null
+  setSpotlight(key) {
+    const targets = {
+      objective: [this.objectiveEl, this.objectiveEl],
+      prompt: [this.promptEl, this.promptEl],
+      cargo: [this.cargoEl.parentElement, this.cargoEl],
+      profit: [this.profitEl.parentElement, this.profitEl],
+      time: [this.timebarEl.parentElement, this.timebarEl],
+    };
+    for (const node of this.root.querySelectorAll('.lifted, .spotlight')) node.classList.remove('lifted', 'spotlight');
+    const pair = key ? targets[key] : null;
+    this.dimEl.classList.toggle('show', Boolean(pair));
+    if (!pair) return;
+    pair[0].classList.add('lifted');
+    pair[1].classList.add('spotlight');
   }
 
   // Mainkan ulang animasi CSS sekali (membal / bergetar).
@@ -248,7 +271,7 @@ export class Hud {
     const { game } = this;
     const { run, clock } = game;
     const t = game.cfg.time;
-    this.setText(this.dayEl, `DAY ${run.day} / ${game.cfg.run.days}`);
+    this.setText(this.dayEl, game.mode === 'tutorial' ? '🎓 PELATIHAN' : `DAY ${run.day} / ${game.cfg.run.days}`);
     const mod = game.dayMods.id ? DAY_MODS[game.dayMods.id] : null;
     this.setHtml(this.modEl, mod ? `${mod.icon} ${mod.name}` : '');
     this.modEl.title = mod ? mod.desc : '';
@@ -265,7 +288,7 @@ export class Hud {
 
     // Profit hidup vs quota (rumus sama dengan laporan akhir hari).
     const p = game.liveProfit;
-    const quota = run.quota;
+    const quota = game.quota;
     const scale = Math.max(quota * 1.25, p.profit, 1);
     const passed = p.profit >= quota;
     this.setHtml(this.profitValue, `<b class="${p.profit < 0 ? 'neg' : ''}">${money(p.profit)}</b> / $${quota}${passed ? ' <span class="ok">✓ LOLOS</span>' : ''}`);
@@ -317,6 +340,13 @@ export class Hud {
   objectiveText() {
     const { game } = this;
     const t = game.nav.target;
+    // Hari Pelatihan: objektif datang dari langkah tutorial.
+    if (game.mode === 'tutorial') {
+      const obj = game.tutorial?.objective;
+      if (!obj) return '';
+      const d = t ? ` · <span class="dist">${meters(game.nav.route.length > 1 ? routeLength(game.nav.route) : Math.hypot(t.x - game.car.x, t.z - game.car.z))}</span>` : '';
+      return `🎓 ${obj}${d}`;
+    }
     if (!t) return '';
     const { car } = game;
     const dist = game.nav.route.length > 1 ? routeLength(game.nav.route) : Math.hypot(t.x - car.x, t.z - car.z);

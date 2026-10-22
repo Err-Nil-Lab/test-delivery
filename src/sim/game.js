@@ -15,6 +15,7 @@ import { StyleSystem } from './style.js';
 import { Navigator } from './navigation.js';
 import { RivalSystem } from './rival.js';
 import { UPGRADES, DAY_MODS, MUTABLE_SECTIONS, restoreInPlace } from './upgrades.js';
+import { TutorialDirector, TUTORIAL_QUOTA } from './tutorial.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -26,6 +27,8 @@ export class Game {
     this.baseCfg = Object.fromEntries(MUTABLE_SECTIONS.map((k) => [k, structuredClone(config[k])]));
     this.dayMods = {};
     this.rodCharges = 0;
+    this.mode = 'normal'; // 'tutorial' selama Hari Pelatihan
+    this.tutorial = null;
     this.seed = seed;
     this.bus = new EventBus();
     this.rng = createRng(seed);
@@ -66,8 +69,13 @@ export class Game {
     this.steerHistory = [];
     this.effects = this.packages.effects;
     // Hint tutorial yang sudah pernah tampil (bertahan walau run diulang, supaya tidak cerewet).
-    this.tutorial = new Set();
+    this.tutorialSeen = new Set();
     this.car.reset(this.world.hq.spawn);
+  }
+
+  // Quota yang ditampilkan HUD (Hari Pelatihan punya quota latihan sendiri).
+  get quota() {
+    return this.mode === 'tutorial' ? TUTORIAL_QUOTA : this.run.quota;
   }
 
   get inHQ() {
@@ -84,8 +92,8 @@ export class Game {
 
   // Hint kontekstual: tampil sekali saja seumur sesi.
   teach(key, text, delay = 0) {
-    if (this.tutorial.has(key)) return false;
-    this.tutorial.add(key);
+    if (this.tutorialSeen.has(key)) return false;
+    this.tutorialSeen.add(key);
     this.hint(text, delay);
     return true;
   }
@@ -109,6 +117,45 @@ export class Game {
     this.runSeconds = 0;
     this.bus.emit('run_start', { runCount: this.run.runCount, seed: this.seed });
     if (this.run.runCount > 1) this.beginDay();
+  }
+
+  // Hari Pelatihan (FTUE): dunia yang tenang, langkah dipandu Hestia. Selesai → Day 1 seperti biasa.
+  beginTutorial() {
+    const { run } = this;
+    run.beginDay();
+    this.mode = 'tutorial';
+    this.applyDayConfig();
+    this.car.reset(this.world.hq.spawn);
+    this.clock.reset();
+    this.clock.setHour(8);
+    this.damage.reset();
+    this.hazards.reset();
+    this.minotaurs.reset();
+    this.resetNpcs();
+    this.style.reset();
+    this.rival.reset();
+    this.packages.resetDay({ scripted: false, day: run.day, spawnInitial: false });
+    this.packages.autoSpawn = false;
+    this.steerHistory = [];
+    this.collisionCooldown = 0;
+    this.earlyEndUntil = -Infinity;
+    this.pendingHints = [];
+    this.leftHQ = false;
+    // Materi yang diajarkan di pelatihan tidak perlu diulang lewat hint.
+    for (const key of ['fragile', 'express', 'zeus-start']) this.tutorialSeen.add(key);
+    this.tutorial = new TutorialDirector(this);
+    this.bus.emit('tutorial_start', {});
+    this.tutorial.start();
+  }
+
+  // Pelatihan selesai (atau dilewati): lanjut ke Day 1 yang bersih.
+  finishTutorial({ skipped = false } = {}) {
+    if (this.mode !== 'tutorial') return;
+    this.mode = 'normal';
+    this.tutorial = null;
+    this.packages.autoSpawn = true;
+    this.bus.emit('tutorial_done', { skipped });
+    this.beginDay();
   }
 
   beginDay() {
@@ -149,7 +196,7 @@ export class Game {
     if (this.leftHQ && car.driftEnabled && car.speed > 14 && !car.airborne) {
       this.teach('drift', 'Tahan Space sambil belok untuk ngepot. Drift lama lalu lepas = TURBO!', 1);
     }
-    if (!this.tutorial.has('iris')) {
+    if (!this.tutorialSeen.has('iris')) {
       const threatened = this.packages.waiting.find((p) => p.threat && Math.hypot(p.pickup.x - car.x, p.pickup.z - car.z) < 45);
       if (threatened) this.teach('iris', '🟣 Iris Express mengincar paket! Ambil duluan, atau senggol vannya nanti supaya curiannya jatuh.');
     }
@@ -197,7 +244,12 @@ export class Game {
 
   resetNpcs() {
     if (this.npcEnabled) {
-      this.traffic.reset(this.car, { density: this.dayMods.trafficMult ?? 1, minRivals: this.cfg.npc.rival.enabled ? this.cfg.npc.rival.minRivals : 0 });
+      const training = this.mode === 'tutorial';
+      this.traffic.reset(this.car, {
+        density: training ? 0.5 : (this.dayMods.trafficMult ?? 1),
+        minRivals: !training && this.cfg.npc.rival.enabled ? this.cfg.npc.rival.minRivals : 0,
+        allowRivals: !training,
+      });
       this.crowd.reset({ mult: this.dayMods.crowdMult ?? 1 });
     } else {
       this.traffic.cars = [];
@@ -266,12 +318,14 @@ export class Game {
 
     if (!this.inHQ) this.leftHQ = true;
 
-    const phase = this.clock.update(dt * this.effects.clockMultiplier); // Chronos
+    const training = this.mode === 'tutorial';
+    // Hari Pelatihan: jam berhenti.
+    const phase = training ? null : this.clock.update(dt * this.effects.clockMultiplier); // Chronos
     if (phase) this.bus.emit('phase', { phase });
 
     this.packages.update(dt, this.car, hour);
 
-    const hits = this.hazards.update(dt, {
+    const hits = training ? [] : this.hazards.update(dt, {
       car: this.car,
       phase: this.clock.phase,
       stormElapsed: this.clock.stormElapsed,
@@ -301,7 +355,7 @@ export class Game {
     const mcfg = this.cfg.minotaur;
     const rams = this.minotaurs.update(dt, {
       car: this.car,
-      active: this.run.day >= mcfg.activeFromDay,
+      active: !training && this.run.day >= mcfg.activeFromDay,
       mode: this.effects.minotaurMode,
     });
     for (const ram of rams) {
@@ -317,14 +371,15 @@ export class Game {
       this.packages.jolt('minotaur', hour);
     }
 
-    this.updateTutorial();
+    if (!training) this.updateTutorial();
     if (this.npcEnabled) {
       this.traffic.update(dt, { van: this.car, phase: this.clock.phase, walkers: this.crowd.walkers(), scare: (a, c) => this.crowd.scare(a, c) });
       this.crowd.update(dt, { van: this.car, phase: this.clock.phase });
-      this.rival.update(dt, { traffic: this.traffic, packages: this.packages, van: this.car, hour });
+      if (!training) this.rival.update(dt, { traffic: this.traffic, packages: this.packages, van: this.car, hour });
     }
     this.style.update(dt, { car: this.car, npcCars: this.traffic.cars });
     this.nav.update(dt, this);
+    if (training) this.tutorial.update(dt);
 
     while (this.pendingHints.length && this.pendingHints[0].at <= this.clock.elapsed) {
       this.bus.emit('hint', { text: this.pendingHints.shift().text });
@@ -381,6 +436,12 @@ export class Game {
       const res = { kind: 'moving' };
       this.bus.emit('interact', res);
       return res;
+    }
+    // Hari Pelatihan: kembali ke HQ di langkah terakhir = pelatihan selesai.
+    if (this.mode === 'tutorial') {
+      if (!this.tutorial.atHQ()) return null;
+      this.finishTutorial();
+      return { kind: 'tutorial-done' };
     }
     if (hour < this.cfg.time.duskHour && !this.earlyEndPending) {
       this.earlyEndUntil = this.clock.elapsed + this.cfg.time.earlyEndConfirmSeconds;

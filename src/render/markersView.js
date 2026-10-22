@@ -125,11 +125,35 @@ export class MarkersView {
     for (const pkg of items) if (!map.has(pkg.id)) map.set(pkg.id, create(pkg));
   }
 
+  // Penanda latihan (Hari Pelatihan): cincin + pilar biru di titik tujuan langkah "menyetir".
+  updateWaypoint() {
+    const { game } = this;
+    const t = game.mode === 'tutorial' ? game.tutorial?.target : null;
+    const want = t?.kind === 'waypoint' ? t : null;
+    if (this.waypoint && this.waypoint.target !== want) {
+      this.scene.remove(this.waypoint.group);
+      disposeObject(this.waypoint.group);
+      this.waypoint = null;
+    }
+    if (want && !this.waypoint) {
+      const group = new THREE.Group();
+      group.position.set(want.x, game.world.heightAt(want.x, want.z) + 0.3, want.z);
+      group.add(beam('#7aa7ff', 16, 1.2));
+      group.add(ring('#7aa7ff', want.radius ?? 6));
+      const label = tag('<b>🎓 Ke sini!</b>', 'dest');
+      label.position.y = 5;
+      group.add(label);
+      this.scene.add(group);
+      this.waypoint = { target: want, group };
+    }
+  }
+
   update(dt) {
     this.time += dt;
     const { packages, car, nav } = this.game;
     const near = (p, r) => Math.hypot(p.x - car.x, p.z - car.z) <= r;
     const isTarget = (p) => nav.target && nav.target.x === p.x && nav.target.z === p.z;
+    this.updateWaypoint();
     this.sync(this.pickups, packages.waiting, (p) => this.createPickup(p));
     this.sync(this.dests, packages.cargo, (p) => this.createDest(p));
 

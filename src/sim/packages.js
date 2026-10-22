@@ -15,6 +15,7 @@ export class PackageSystem {
     this.rng = rng;
     this.bus = bus;
     this.nextId = 1;
+    this.autoSpawn = true; // Hari Pelatihan: paket hanya dimunculkan oleh langkah tutorial
     this.resetDay({ scripted: false, spawnInitial: false });
   }
 
@@ -95,6 +96,7 @@ export class PackageSystem {
       for (const p of expired) this.bus.emit('package_expired', { id: p.id, packageType: p.type, x: p.pickup.x, z: p.pickup.z, hour });
     }
 
+    if (!this.autoSpawn) return;
     this.spawnTimer += dt;
     if (this.spawnTimer >= this.cfg.spawnInterval) {
       this.spawnTimer = 0;

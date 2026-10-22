@@ -25,7 +25,8 @@ export class TrafficSystem {
 
   // Sebar mobil di semua lajur. Mobil tidak muncul terlalu dekat dengan van.
   // density: pengali kepadatan hari ini (titah dewa), minRivals: jumlah minimum van saingan.
-  reset(van, { density = 1, minRivals = 1 } = {}) {
+  // allowRivals: false = tanpa van saingan sama sekali (Hari Pelatihan).
+  reset(van, { density = 1, minRivals = 1, allowRivals = true } = {}) {
     const c = this.cfg;
     this.cars = [];
     if (!c.enabled) return;
@@ -41,6 +42,9 @@ export class TrafficSystem {
       const p = samplePath(slot.lane.path, slot.s);
       if (Math.hypot(p.x - van.x, p.z - van.z) < 14) continue;
       this.cars.push(this.makeCar(this.cars.length, slot.lane, slot.s));
+    }
+    if (!allowRivals) {
+      for (const car of this.cars) if (car.kind === 'rival') Object.assign(car, this.makeCar(car.id, car.lane, car.s, 'sedan'));
     }
     // Selalu ada beberapa van saingan Iris Express yang berkeliaran.
     for (const sedan of this.cars.filter((car) => car.kind === 'sedan' && car.lane.road.kind !== 'mountain')) {
