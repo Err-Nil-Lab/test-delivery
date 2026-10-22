@@ -45,6 +45,9 @@ export class Game {
     this.crowd = new CrowdSystem(this.world, config.npc, npcRng, this.bus);
     this.npcEnabled = config.npc.enabled;
     this.style = new StyleSystem(config.style, this.bus);
+    this.bus.on('style_trick', () =>
+      this.teach('combo', 'Aksi berani = tip! Aksi beruntun menaikkan pengali combo, tapi kena damage sebelum dibayar = hangus.'),
+    );
     this.nav = new Navigator(this.world, config.gps);
     this.run = new RunState(config.run);
     this.telemetry = new Telemetry(this.bus, () => ({
@@ -62,7 +65,8 @@ export class Game {
     this.leftHQ = false;
     this.steerHistory = [];
     this.effects = this.packages.effects;
-    this.curseHintShown = false;
+    // Hint tutorial yang sudah pernah tampil (bertahan walau run diulang, supaya tidak cerewet).
+    this.tutorial = new Set();
     this.car.reset(this.world.hq.spawn);
   }
 
@@ -76,6 +80,23 @@ export class Game {
 
   get earlyEndPending() {
     return this.clock.elapsed <= this.earlyEndUntil;
+  }
+
+  // Hint kontekstual: tampil sekali saja seumur sesi.
+  teach(key, text, delay = 0) {
+    if (this.tutorial.has(key)) return false;
+    this.tutorial.add(key);
+    this.hint(text, delay);
+    return true;
+  }
+
+  // Profit kalau hari berakhir sekarang (rumus sama dengan laporan, tanpa biaya derek).
+  get liveProfit() {
+    const income = this.packages.income;
+    const tips = this.style.tips;
+    const repair = this.damage.total;
+    const penalty = this.packages.cargo.reduce((sum, p) => sum + Math.round(p.pay * this.cfg.packages.undeliveredPenalty), 0);
+    return { income, tips, repair, penalty, profit: income + tips - repair - penalty };
   }
 
   hint(text, delay = 0) {
@@ -115,11 +136,22 @@ export class Game {
     }
 
     if (run.scripted) {
-      this.hint(this.car.driftEnabled ? 'W/S: gas & rem · A/D: belok · Space: ngepot (drift) · H: drift on/off' : 'W/S: gas & rem · A/D: belok');
-      this.hint('Paket ⚡ Zeus menunggu di Gerbang Istana Zeus. Ikuti panah ⚡ ke utara, berhenti di penanda, lalu tekan E.', 4);
-      this.hint('Hati-hati: Minotaur di padang menyeruduk van yang lewat. Lihat arah ancang-ancangnya, lalu menghindar!', 12);
-    } else if (run.runCount === 1 && run.day === 2) {
-      this.hint('Paket kini muncul acak di seluruh kota. Van punya 3 slot; paket Zeus memakan 2.');
+      this.teach('zeus-start', 'Ambil paket ⚡ Zeus di Gerbang Istana. Ikuti panah di jalan, berhenti di lingkaran, lalu tekan E.');
+      this.teach('minotaur', 'Hati-hati: Minotaur di padang menyeruduk van yang lewat. Lihat arah ancang-ancangnya, lalu menghindar!', 14);
+    }
+    if (run.day >= 2) this.teach('day2', 'Paket kini muncul acak di seluruh kota. Profit di atas quota masuk Kas bengkel untuk upgrade.');
+    if (run.modifier) this.teach('titah', 'Tiap hari ada titah dewa yang mengubah aturan. Lihat chipnya di panel jam.', 5);
+  }
+
+  // Hint kontekstual yang dipicu keadaan permainan (dipanggil tiap step).
+  updateTutorial() {
+    const { car } = this;
+    if (this.leftHQ && car.driftEnabled && car.speed > 14 && !car.airborne) {
+      this.teach('drift', 'Tahan Space sambil belok untuk ngepot. Drift lama lalu lepas = TURBO!', 1);
+    }
+    if (!this.tutorial.has('iris')) {
+      const threatened = this.packages.waiting.find((p) => p.threat && Math.hypot(p.pickup.x - car.x, p.pickup.z - car.z) < 45);
+      if (threatened) this.teach('iris', '🟣 Iris Express mengincar paket! Ambil duluan, atau senggol vannya nanti supaya curiannya jatuh.');
     }
   }
 
@@ -285,6 +317,7 @@ export class Game {
       this.packages.jolt('minotaur', hour);
     }
 
+    this.updateTutorial();
     if (this.npcEnabled) {
       this.traffic.update(dt, { van: this.car, phase: this.clock.phase, walkers: this.crowd.walkers(), scare: (a, c) => this.crowd.scare(a, c) });
       this.crowd.update(dt, { van: this.car, phase: this.clock.phase });
@@ -328,14 +361,11 @@ export class Game {
     const result = this.packages.interact(this.car, hour);
     if (result) {
       if (result.kind === 'deliver') this.explodeScams(result, hour);
-      if (result.kind === 'pickup' && result.pkg.type === 'smuggle' && !this.smuggleHintShown) {
-        this.smuggleHintShown = true;
-        this.hint('Paket selundupan: bayaran besar, tapi bisa saja scam dan meledak saat diantar. Persentasenya tertulis di label.');
-      }
-      if (result.kind === 'pickup' && result.pkg.type === 'curse' && !this.curseHintShown) {
-        this.curseHintShown = true;
-        this.hint('Paket terkutuk! Efeknya ikut pergi begitu paket ini diantar.');
-      }
+      const picked = result.kind === 'pickup' ? result.pkg.type : null;
+      if (picked === 'smuggle') this.teach('smuggle', 'Selundupan: bayaran besar, tapi bisa scam dan meledak saat diantar. Peluang scam tertulis di label.');
+      if (picked === 'curse') this.teach('curse', 'Paket terkutuk! Efeknya ikut pergi begitu paket ini diantar.');
+      if (picked === 'fragile') this.teach('fragile', '🏺 Paket rapuh: tiap benturan bayarannya turun, 3 kali = pecah. Nyetir halus!');
+      if (picked === 'express') this.teach('express', '⏱️ Paket kilat: antar sebelum waktunya habis (lihat slot cargo), telat = setengah bayaran.');
       if (result.kind === 'pickup' && result.pkg.type === 'zeus' && this.run.scripted) {
         this.hint('Selama membawa paket Zeus kamu kebal petir. Antar ke Electrical Plant di puncak gunung (ikuti panah ⚡).');
       }

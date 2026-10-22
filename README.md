@@ -70,6 +70,30 @@ URL bisa diberi parameter:
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
 
+## Membaca layar (HUD)
+
+HUD disusun dalam 3 tingkat ([`src/ui/hud.js`](src/ui/hud.js)), supaya yang penting terbaca sekali lirik:
+
+| Tingkat | Posisi | Isi |
+|---|---|---|
+| **1. Status** (selalu tampil) | Kiri atas | **Panel Shift:** hari + chip titah dewa, jam, **bar waktu** (siang / senja / badai), dan **bar Profit vs Quota** |
+| | Kanan atas | **Cargo:** slot berisi bayaran atau hitung mundur; slot tujuan aktif diberi garis putih. Di bawahnya chip status (blessing, kutukan, upgrade) |
+| | Bawah tengah | Prompt <kbd>E</kbd> |
+| **2. Konteks** | Atas tengah | **Strip objektif:** satu kalimat tugas sekarang, misalnya "📦 Antar ke Kafe Dionysus · 240 m · $140" |
+| | Tepi layar | **Satu** panah ke tujuan itu saat di luar layar |
+| | Bawah tengah | Meter combo |
+| **3. Cerita** | Kiri bawah | Zeus LIVE, kartu **hint 💡** (antrean sendiri, tidak tergusur notifikasi), lalu notifikasi (maks 3, yang sama digabung "×2") |
+
+- **Bar profit** memakai rumus yang sama dengan laporan: income + tip − repair − denda paket yang masih dibawa. Bar berubah emas "✓ LOLOS" saat quota terlewati.
+- **Label paket berjenjang:**
+  - Dari jauh hanya ikon + bayaran (+ peluang scam / batas waktu).
+  - Detail (jenis, tujuan, jarak) muncul saat van ≤ 30 m atau paket itu tujuan aktif.
+  - Label tujuan antar hanya tampil saat dekat atau menjadi tujuan aktif; pilar cahayanya tetap terlihat.
+- **Popup di dunia bertingkat:** uang/rugi besar, aksi sedang, celoteh NPC kecil dan samar (hanya ≤ 25 m, maks 2 sekaligus). Popup di tempat yang sama ditumpuk ke atas.
+- **Banner** hanya untuk momen besar (hari mulai, senja, badai, blessing hilang, pecah, scam).
+- **Warna:** satu warna, satu arti. Hijau = uang, merah = rugi/bahaya, emas = Zeus, biru langit = tujuan antar, biru = HQ, oranye = kilat/senja, ungu = Iris. Kutukan memakai warna dewanya.
+- **Onboarding:** intro hanya berisi kontrol inti. Drift, combo, rapuh, kilat, selundupan, kutukan, Iris, dan titah dijelaskan lewat hint saat pertama kali ditemui. Tiap hint muncul sekali per sesi (`game.teach`).
+
 ## Bengkel Hephaestus, titah dewa harian, Iris Express
 
 **Bengkel Hephaestus** (upgrade roguelike, [`src/sim/upgrades.js`](src/sim/upgrades.js)):

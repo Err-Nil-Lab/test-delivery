@@ -22,7 +22,7 @@ const COLORS = {
   plant: '#ffd84a',
   safe: '#f6f3ec',
   zeus: '#ffd84a',
-  dest: '#4ade80',
+  dest: '#7dd3fc',
   minotaur: '#ff4d3d',
 };
 
