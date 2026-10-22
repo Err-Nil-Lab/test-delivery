@@ -1,11 +1,15 @@
-// Penanda paket: pilar cahaya di titik pickup (warna = tipe, label = bayaran + tujuan,
-// panah di tanah = arah tujuan) dan pilar tujuan untuk paket yang sedang dibawa.
+// Penanda paket: pilar cahaya di titik pickup (warna = tipe, panah di tanah = arah tujuan)
+// dan pilar tujuan untuk paket yang sedang dibawa.
+// Label berjenjang supaya layar tidak penuh teks: ringkas (ikon + bayaran + angka kunci) dari jauh,
+// lengkap (jenis, tujuan, jarak) saat van dekat atau paket itu tujuan aktif GPS.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { disposeObject } from './dispose.js';
 import { packageLook } from '../sim/curses.js';
 
-const COLORS = { dest: '#4ade80', zeusDest: '#ffe066' };
+const COLORS = { dest: '#7dd3fc', zeusDest: '#ffe066' }; // tujuan antar = biru langit (hijau khusus uang)
+const DETAIL_RADIUS = 30;
+const DEST_LABEL_RADIUS = 40;
 
 function beam(color, height, radius) {
   const mesh = new THREE.Mesh(
@@ -73,14 +77,22 @@ export class MarkersView {
     group.add(arrowPivot);
 
     const icon = look.icon ? `${look.icon} ` : '';
+    // Ringkas: ikon + bayaran + satu angka kunci (peluang scam / batas waktu).
+    let key = '';
+    if (pkg.type === 'smuggle') key = ` · ${Math.round(pkg.scamChance * 100)}%`;
+    if (pkg.type === 'express') key = ` · ${pkg.timeLimit}s`;
+    // Lengkap: jenis + tujuan + jarak perjalanan.
+    let kind = pkg.type === 'safe' ? 'Paket biasa' : look.name;
+    if (pkg.type === 'fragile') kind = 'Rapuh: retak tiap benturan';
+    if (pkg.type === 'express') kind = `Kilat: ${pkg.timeLimit} detik sejak diambil`;
+    if (pkg.type === 'smuggle') kind = `Selundupan · scam ${Math.round(pkg.scamChance * 100)}%`;
+    const trip = Math.round(Math.hypot(pkg.dest.x - pkg.pickup.x, pkg.dest.z - pkg.pickup.z) / 10) * 10;
     const slots = pkg.slots > 1 ? ` · ${pkg.slots} slot` : '';
-    let curse = pkg.type === 'curse' ? `<small class="curse-name">${look.name}</small>` : '';
-    if (pkg.type === 'fragile') curse = '<small class="variant">Rapuh: retak tiap benturan</small>';
-    if (pkg.type === 'express') curse = `<small class="variant">Kilat: ${pkg.timeLimit} detik</small>`;
-    const label = tag(`<b>${icon}$${pkg.pay}</b>${curse}<small>→ ${pkg.dest.name}${slots}</small>`, pkg.type);
-    if (pkg.type === 'curse' || pkg.type === 'fragile' || pkg.type === 'express') label.element.style.background = color;
-    if (pkg.type === 'smuggle') label.element.innerHTML = `<b>${icon}$${pkg.pay}</b><small class="scam">scam ${Math.round(pkg.scamChance * 100)}%</small><small>→ ${pkg.dest.name}</small>`;
-    label.element.insertAdjacentHTML('beforeend', '<small class="threat">🟣 Iris Express mengincar!</small>');
+    const label = tag(
+      `<b>${icon}$${pkg.pay}${key}</b><small class="detail kind">${kind}</small><small class="detail">→ ${pkg.dest.name} · ~${trip} m${slots}</small><small class="threat">🟣 Iris Express mengincar!</small>`,
+      pkg.type,
+    );
+    if (pkg.type === 'curse' || pkg.type === 'fragile' || pkg.type === 'express' || pkg.type === 'smuggle') label.element.style.background = color;
     label.position.y = special ? 6 : 4.5;
     group.add(label);
 
@@ -94,11 +106,11 @@ export class MarkersView {
     const color = pkg.type === 'zeus' ? COLORS.zeusDest : pkg.type === 'curse' ? packageLook(pkg).color : COLORS.dest;
     group.add(beam(color, 22, 1.3));
     group.add(ring(color, this.game.cfg.packages.dropoffRadius));
-    const label = tag(`<b>Antar: ${pkg.dest.name}</b><small>$${pkg.pay}</small>`, `dest ${pkg.type}`);
+    const label = tag(`<b>Antar · $${pkg.pay}</b><small class="detail">${pkg.dest.name}</small>`, `dest ${pkg.type}`);
     label.position.y = 5;
     group.add(label);
     this.scene.add(group);
-    return { group };
+    return { group, label };
   }
 
   sync(map, items, create) {
@@ -115,7 +127,9 @@ export class MarkersView {
 
   update(dt) {
     this.time += dt;
-    const { packages } = this.game;
+    const { packages, car, nav } = this.game;
+    const near = (p, r) => Math.hypot(p.x - car.x, p.z - car.z) <= r;
+    const isTarget = (p) => nav.target && nav.target.x === p.x && nav.target.z === p.z;
     this.sync(this.pickups, packages.waiting, (p) => this.createPickup(p));
     this.sync(this.dests, packages.cargo, (p) => this.createDest(p));
 
@@ -128,6 +142,12 @@ export class MarkersView {
       view.group.visible = remaining > 8 || Math.sin(this.time * 14) > -0.3;
       view.label.visible = view.group.visible;
       view.label.element.classList.toggle('threatened', Boolean(pkg.threat));
+      view.label.element.classList.toggle('expanded', isTarget(pkg.pickup) || near(pkg.pickup, DETAIL_RADIUS));
+    }
+    // Label tujuan hanya saat dekat atau menjadi tujuan aktif (pilar cahayanya tetap terlihat dari jauh).
+    for (const pkg of packages.cargo) {
+      const view = this.dests.get(pkg.id);
+      view.label.visible = isTarget(pkg.dest) || near(pkg.dest, DEST_LABEL_RADIUS);
     }
   }
 }

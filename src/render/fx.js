@@ -56,14 +56,9 @@ export class EventFx {
     });
     on('day_start', () => this.skids.clear());
     // Bonus gaya dan paket rapuh.
-    // Beberapa aksi sekaligus: teks ditumpuk ke atas supaya tidak saling menimpa.
-    this.trickStack = { t: -1, n: 0 };
     on('style_trick', ({ name, value, mult }) => {
       const c = at();
-      const now = performance.now() / 1000;
-      this.trickStack.n = now - this.trickStack.t < 0.6 ? this.trickStack.n + 1 : 0;
-      this.trickStack.t = now;
-      this.popups.spawn(`${name} +$${value}${mult > 1 ? ` ×${mult}` : ''}`, c.x, c.y + 4.5 + this.trickStack.n * 1.6, c.z, 'trick', 0.9);
+      this.popups.spawn(`${name} +$${value}${mult > 1 ? ` ×${mult}` : ''}`, c.x, c.y + 4.5, c.z, 'trick', 0.9);
     });
     on('style_banked', ({ tip }) => {
       const c = at();
@@ -106,16 +101,16 @@ export class EventFx {
       this.particles.burst(10, { x: e.x, y: y + 1, z: e.z, speed: 5, up: 4, life: 0.4, size: 0.25, color: '#ffb347', gravity: 15 });
     });
     on('npc_honk', (e) => {
-      if (near(e, 35)) this.popups.spawn(e.kind === 'rival' ? 'TIN TIN TIN!' : 'TIN!', e.x, groundY(e) + 3, e.z, 'honk', 0.7);
+      if (near(e, 25)) this.popups.spawn(e.kind === 'rival' ? 'TIN TIN TIN!' : 'TIN!', e.x, groundY(e) + 3, e.z, 'honk', 0.7);
     });
     on('npc_dodge', (e) => {
-      if (!near(e)) return;
+      if (!near(e, 25)) return;
       this.popups.spawn(pick(DODGE_WORDS[e.kind] ?? DODGE_WORDS.person), e.x, groundY(e) + 2.6, e.z, e.kind === 'person' ? 'scream' : 'animal', 0.8);
     });
     on('npc_zapped', (e) => {
       if (!near(e)) return;
       const y = groundY(e);
-      this.popups.spawn(e.kind === 'sheep' ? 'BAAA?' : 'ZAP!', e.x, y + 2.5, e.z, 'zap', 0.8);
+      if (near(e, 25)) this.popups.spawn(e.kind === 'sheep' ? 'BAAA?' : 'ZAP!', e.x, y + 2.5, e.z, 'zap', 0.8, 'ambient');
       this.particles.burst(6, { x: e.x, y: y + 1, z: e.z, speed: 1.5, up: 2, life: 1, size: 0.6, grow: 1.5, color: '#4a4a4a', drag: 2 });
     });
     on('cargo_full', () => {

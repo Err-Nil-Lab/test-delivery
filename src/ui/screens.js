@@ -51,15 +51,13 @@ export class Screens {
       <h1>Hermes Express</h1>
       <p class="lead">Dulu kamu satu-satunya messenger Zeus dan Hera. Lalu satu paket salah kirim, dan semuanya berantakan.
       Status dewamu dicabut, sandal bersayapmu disita. Kini kamu mengantar paket para dewa dengan van tua.</p>
-      <p>Penuhi <b>quota profit</b> setiap hari selama <b>7 hari</b>. Gagal sekali, ulang dari Day 1.</p>
+      <p class="goal">🎯 Penuhi <b>quota profit</b> tiap hari selama <b>7 hari</b>, lalu pulang ke HQ sebelum badai Zeus.</p>
       <ul class="controls">
-        <li><kbd>W</kbd><kbd>S</kbd> gas & rem/mundur · <kbd>A</kbd><kbd>D</kbd> belok</li>
-        <li><kbd>Space</kbd> handbrake: ngepot, drift lama = turbo · <kbd>H</kbd> drift on/off</li>
-        <li>Aksi berani (drift, nyaris kena petir, nyalip tipis, terbang) = <b>tip</b>. Kena damage = combo hangus</li>
-        <li>Ikuti panah GPS di jalan · <kbd>G</kbd> GPS on/off · <kbd>Esc</kbd> pause &amp; pengaturan</li>
-        <li>Berhenti di penanda + <kbd>E</kbd> untuk ambil dan antar paket</li>
-        <li>Pulang ke HQ + <kbd>E</kbd> untuk mengakhiri hari</li>
+        <li><kbd>W</kbd><kbd>S</kbd> gas & rem · <kbd>A</kbd><kbd>D</kbd> belok</li>
+        <li>Berhenti di lingkaran + <kbd>E</kbd> ambil / antar paket</li>
+        <li><kbd>Esc</kbd> pause &amp; pengaturan</li>
       </ul>
+      <p class="muted">Trik lain (drift, combo, paket aneh) dijelaskan saat pertama kali kamu temui.</p>
       <button data-action="start" data-primary>Mulai (Enter)</button>`,
       { start: onStart },
     );
@@ -92,6 +90,7 @@ export class Screens {
         <tr class="total"><td>Profit</td><td data-count="${report.profit}">${money(report.profit)}</td></tr>
         <tr class="quota"><td>Quota hari ini</td><td>$${report.quota}</td></tr>
       </table>
+      <div class="report-bar ${report.pass ? 'pass' : 'fail'}"><i style="width:${Math.min(100, (Math.max(0, report.profit) / Math.max(report.quota * 1.25, report.profit, 1)) * 100).toFixed(1)}%"></i><b style="left:${((report.quota / Math.max(report.quota * 1.25, report.profit, 1)) * 100).toFixed(1)}%"></b></div>
       <details ${report.damageEvents.length ? 'open' : ''}><summary>Rincian damage</summary><ul class="damage-list">${damageRows}</ul></details>
       ${verdict}
       <p class="muted">Dompet: ${money(run.wallet)}</p>

@@ -181,30 +181,30 @@ export class Navigator {
   pickTarget(game) {
     const { car, packages, clock } = game;
     const hq = game.world.hq.spawn;
-    const near = (list) => list.reduce((a, b) => (!a || distance(b, car) < distance(a, car) ? b : a), null);
     if (clock.phase === 'storm' || clock.phase === 'limit') return game.inHQ ? null : { ...hq, kind: 'hq', label: 'HQ' };
     const express = packages.cargo.find((p) => p.type === 'express' && !p.late);
-    if (express) return { ...express.dest, kind: 'express', label: express.dest.name };
+    if (express) return { ...express.dest, kind: 'express', label: express.dest.name, pkg: express, deliver: true };
     if (packages.cargo.length) {
       const pkg = packages.cargo.reduce((a, b) => (distance(b.dest, car) < distance(a.dest, car) ? b : a));
-      return { ...pkg.dest, kind: pkg.type === 'zeus' ? 'zeus' : 'dest', label: pkg.dest.name };
+      return { ...pkg.dest, kind: pkg.type === 'zeus' ? 'zeus' : 'dest', label: pkg.dest.name, pkg, deliver: true };
     }
     const zeus = packages.waiting.find((p) => p.type === 'zeus');
-    if (zeus && game.run.scripted) return { ...zeus.pickup, kind: 'zeus', label: 'Paket Zeus' };
+    if (zeus && game.run.scripted) return { ...zeus.pickup, kind: 'zeus', label: 'Paket Zeus', pkg: zeus, deliver: false };
     if (clock.phase === 'dusk') return game.inHQ ? null : { ...hq, kind: 'hq', label: 'HQ' };
-    const pickup = near(packages.waiting.map((p) => p.pickup));
-    return pickup ? { ...pickup, kind: 'pickup', label: pickup.name } : null;
+    const waiting = packages.waiting.reduce((a, b) => (!a || distance(b.pickup, car) < distance(a.pickup, car) ? b : a), null);
+    return waiting ? { ...waiting.pickup, kind: 'pickup', label: waiting.pickup.name, pkg: waiting, deliver: false } : null;
   }
 
+  // Tujuan aktif selalu dihitung (dipakai strip objektif di HUD); rute hanya saat GPS menyala.
   update(dt, game) {
-    if (!this.enabled) {
-      this.route = [];
-      return;
-    }
     this.timer -= dt;
     const target = this.pickTarget(game);
     const changed = (target?.x ?? null) !== (this.target?.x ?? null) || (target?.z ?? null) !== (this.target?.z ?? null);
     this.target = target;
+    if (!this.enabled) {
+      this.route = [];
+      return;
+    }
     if (!changed && this.timer > 0) return;
     this.timer = this.cfg.recompute;
     const { car } = game;

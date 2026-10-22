@@ -1,7 +1,7 @@
 // Garis GPS di aspal: chevron ">" yang mengalir dari van menuju tujuan aktif, berwarna sesuai tujuan.
 import * as THREE from 'three';
 
-export const ROUTE_COLORS = { dest: '#4ade80', express: '#fb923c', zeus: '#ffd84a', hq: '#7aa7ff', pickup: '#f6f3ec' };
+export const ROUTE_COLORS = { dest: '#7dd3fc', express: '#fb923c', zeus: '#ffd84a', hq: '#7aa7ff', pickup: '#f6f3ec' };
 const SPACING = 3.2;
 const SPEED = 9; // meter per detik aliran chevron
 const MAX = 420;

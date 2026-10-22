@@ -1,11 +1,17 @@
 :root {
+  /* Token warna: tiap warna punya satu arti. */
+  --money: #4ade80; /* uang, profit, tip */
+  --danger: #ff5a4d; /* rugi, damage, badai */
+  --info: #7aa7ff; /* HQ, info netral, tujuan antar */
+  --warn: #fb923c; /* kilat, senja, peringatan */
+  --iris: #a78bfa; /* Iris Express */
   --ink: #f6f3ec;
   --ink-dim: #c9c3b4;
   --panel: rgba(18, 20, 32, 0.72);
   --hermes: #3b6fb6;
   --zeus: #ffd84a;
-  --green: #4ade80;
-  --red: #ff5a4d;
+  --green: var(--money);
+  --red: var(--danger);
   --dusk: #ffab6b;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -142,7 +148,7 @@ kbd {
 }
 
 .tag.dest {
-  background: #14532d;
+  background: rgba(40, 70, 140, 0.92);
 }
 
 .tag.dest.zeus {
@@ -205,15 +211,7 @@ kbd {
   animation: pulse 0.8s infinite alternate;
 }
 
-.hud-money {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--ink-dim);
-}
 
-.hud-money b {
-  color: var(--ink);
-}
 
 .hud-caption {
   font-size: 12px;
@@ -273,22 +271,7 @@ kbd {
   border: 2px dashed rgba(255, 255, 255, 0.25);
 }
 
-.hud-blessing {
-  display: none;
-  margin-top: 8px;
-  padding: 4px 8px;
-  border-radius: 5px;
-  background: var(--zeus);
-  color: #1a1a1a;
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-}
 
-.hud-blessing.show {
-  display: block;
-  animation: pulse 0.6s infinite alternate;
-}
 
 .hud-prompt {
   position: absolute;
@@ -311,7 +294,9 @@ kbd {
 
 .hud-banner {
   position: absolute;
-  top: 22%;
+  top: 18%;
+  width: max-content;
+  max-width: calc(100% - 520px);
   left: 50%;
   transform: translate(-50%, -10px);
   text-align: center;
@@ -356,15 +341,6 @@ kbd {
   color: var(--zeus);
 }
 
-.hud-toasts {
-  position: absolute;
-  left: 16px;
-  bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 380px;
-}
 
 .hud-toast {
   padding: 8px 12px;
@@ -396,51 +372,13 @@ kbd {
   color: var(--zeus);
 }
 
-.hud-toast.hint {
-  border-left: 4px solid var(--hermes);
-  font-size: 15px;
-}
 
-.hud-arrows {
-  position: absolute;
-  inset: 0;
-}
 
-.hud-arrow {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: -18px 0 0 -18px;
-  font-weight: 700;
-  font-size: 12px;
-}
 
-.hud-arrow .tip {
-  font-size: 30px;
-  line-height: 36px;
-}
 
-.hud-arrow .name {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--panel);
-  white-space: nowrap;
-}
 
-.hud-arrow.dest .tip {
-  color: var(--green);
-}
 
-.hud-arrow.zeus .tip {
-  color: var(--zeus);
-}
 
-.hud-arrow.hq .tip {
-  color: #8fb3ff;
-}
 
 .hud-vignette {
   position: absolute;
@@ -632,17 +570,6 @@ summary {
 }
 
 /* ---------- Curse ---------- */
-.hud-curse {
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: 5px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  animation: pulse 0.8s infinite alternate;
-}
 
 .hud-cargo .slot.curse {
   color: #fff;
@@ -689,9 +616,6 @@ summary {
   color: #f9a8d4;
 }
 
-.hud-arrow.curse .tip {
-  color: #e9d5ff;
-}
 
 .hud-darkness {
   position: absolute;
@@ -852,9 +776,6 @@ body.hades .labels .tag:not(.dest) {
   animation: shake 0.35s;
 }
 
-.hud-money {
-  transform-origin: left center;
-}
 
 .hud-banner.show .title {
   animation: bump 0.4s ease-out;
@@ -925,9 +846,9 @@ body.desaturate #app canvas {
 /* ---------- Zeus LIVE: reaksi Zeus di pojok kiri atas ---------- */
 .zeus-cam {
   position: absolute;
-  top: 140px; /* di bawah panel jam (yang bisa memuat baris titah dewa) */
+  top: 140px;
   left: 16px;
-  z-index: 3;
+  z-index: 3; /* di HUD dipasang statis di kolom cerita (.hud-feed) */
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -1183,32 +1104,9 @@ body.desaturate #app canvas {
 }
 
 /* ---------- Titah dewa, upgrade, saingan ---------- */
-.hud-mod {
-  margin-top: 6px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #e9d5ff;
-}
 
-.hud-mod:empty,
-.hud-upgrades:empty {
-  display: none;
-}
 
-.hud-upgrades {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 16px;
-}
 
-.hud-upgrades small {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--zeus);
-  vertical-align: super;
-}
 
 .tag .threat {
   display: none;
@@ -1277,4 +1175,381 @@ body.desaturate #app canvas {
 
 .upgrade.owned {
   border-color: var(--green);
+}
+
+/* ================= Hirarki HUD baru ================= */
+.hud-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hud-left {
+  width: 236px;
+}
+
+.hud-mod {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(167, 139, 250, 0.25);
+  color: #ede9fe;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hud-mod:empty {
+  display: none;
+}
+
+/* Bar waktu: siang / senja / badai + penanda jam. */
+.hud-timebar {
+  position: relative;
+  display: flex;
+  height: 6px;
+  margin: 4px 0 10px;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.hud-timebar .seg {
+  height: 100%;
+}
+
+.hud-timebar .seg.day {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 3px 0 0 3px;
+}
+
+.hud-timebar .seg.dusk {
+  background: var(--warn);
+  opacity: 0.8;
+}
+
+.hud-timebar .seg.storm {
+  background: var(--danger);
+  opacity: 0.85;
+  border-radius: 0 3px 3px 0;
+}
+
+.hud-timebar .now {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 14px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Profit hidup vs quota. */
+.hud-profit {
+  transform-origin: left center;
+}
+
+.hud-profit .label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+
+.hud-profit .value {
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.hud-profit .value b {
+  font-size: 20px;
+  color: var(--money);
+}
+
+.hud-profit .value b.neg {
+  color: var(--danger);
+}
+
+.hud-profit .ok {
+  color: var(--zeus);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.hud-profit .bar {
+  position: relative;
+  height: 8px;
+  margin: 4px 0 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hud-profit .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--money);
+  transition: width 0.3s;
+}
+
+.hud-profit.passed .fill {
+  background: var(--zeus);
+}
+
+.hud-profit .quota {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: #fff;
+}
+
+.hud-profit .breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 11px;
+}
+
+.hud-profit .plus {
+  color: rgba(74, 222, 128, 0.85);
+}
+
+.hud-profit .minus {
+  color: rgba(255, 120, 110, 0.95);
+}
+
+/* Cargo: slot aktif (tujuan GPS) + chip status seragam. */
+.hud-cargo .slot {
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.05;
+  font-size: 15px;
+}
+
+.hud-cargo .slot small {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.hud-cargo .slot.active {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.hud-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.hud-status:empty {
+  display: none;
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.hud-blessing {
+  display: none;
+  background: var(--zeus);
+  color: #1a1a1a;
+  text-shadow: none;
+}
+
+.hud-blessing.show {
+  display: inline-block;
+}
+
+.hud-curses,
+.hud-upgrades {
+  display: contents;
+}
+
+.hud-upgrades .up {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.hud-upgrades small {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--zeus);
+}
+
+/* Strip objektif: satu kalimat "apa yang dilakukan sekarang". */
+.hud-objective {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 560px);
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: var(--panel);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.hud-objective.show {
+  opacity: 1;
+}
+
+.hud-objective .dist {
+  color: var(--ink-dim);
+}
+
+.pay {
+  color: var(--money);
+}
+
+.hud-objective .timer {
+  color: var(--warn);
+}
+
+/* Satu panah tepi ke tujuan aktif. */
+.hud-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: -18px 0 0 -18px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+
+.hud-arrow .tip {
+  display: block;
+  font-size: 34px;
+  line-height: 36px;
+}
+
+/* Kolom cerita kiri bawah: Zeus LIVE, kartu hint menetap, toast. */
+.hud-feed {
+  position: absolute;
+  left: 16px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 380px;
+}
+
+.hud-feed .zeus-cam {
+  position: static;
+}
+
+.hud-hint {
+  display: none;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border-left: 4px solid var(--zeus);
+  background: rgba(18, 20, 32, 0.88);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.hud-hint.show {
+  display: flex;
+}
+
+.hud-toasts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hud-toast.iris {
+  color: var(--iris);
+  font-weight: 700;
+}
+
+.hud-prompt .pay {
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .hud-banner .title {
+    font-size: 32px;
+  }
+
+  .hud-objective {
+    max-width: calc(100% - 520px);
+    font-size: 13px;
+  }
+}
+
+/* Label paket berjenjang: detail hanya saat dekat / tujuan aktif. */
+.tag .detail {
+  display: none;
+}
+
+.tag.expanded .detail,
+.tag.dest .detail {
+  display: block;
+}
+
+.tag.expanded {
+  z-index: 1;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+/* Tingkat popup di dunia: major & minor memakai ukuran per jenisnya, ambient (celoteh NPC) dikecilkan. */
+.popup.t-ambient {
+  font-size: 13px !important;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Laporan: bar profit vs quota (garis putih = quota). */
+.report-bar {
+  position: relative;
+  height: 10px;
+  margin: 10px 0 4px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.report-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: var(--danger);
+}
+
+.report-bar.pass i {
+  background: var(--zeus);
+}
+
+.report-bar b {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  background: #fff;
+}
+
+.intro .goal {
+  font-size: 17px;
+}
+
+.hud-profit .muted {
+  color: var(--ink-dim);
 }

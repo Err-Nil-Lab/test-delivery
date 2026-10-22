@@ -32,7 +32,8 @@ view.birds.onScare = (b) => {
   audio.play('flap', { vol: Math.max(0.2, 1 - d / 30) });
 };
 const hud = new Hud(app, game, view);
-const zeusCam = new ZeusCam(app, game, {
+// Zeus LIVE tinggal di kolom cerita kiri bawah (di atas hint & notifikasi).
+const zeusCam = new ZeusCam(hud.zeusSlot, game, {
   cfg: game.cfg.zeusCam,
   calm: params.has('calm'),
   onSpeak: (mood, text) => audio.play('zeusTalk', { mood, syllables: Math.min(10, 3 + Math.round(text.length / 6)) }),
