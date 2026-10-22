@@ -68,6 +68,11 @@ function face() {
   </svg>`;
 }
 
+// Potret Zeus statis dengan ekspresi tertentu (dipakai cutscene & dialog).
+export function zeusPortrait(mood = 'angry') {
+  return face().replace('class="zeus-brows" d=""', `class="zeus-brows" d="${BROWS[mood]}"`).replace('class="zeus-mouth" d=""', `class="zeus-mouth" d="${MOUTH_OPEN[mood]}"`);
+}
+
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export class ZeusCam {

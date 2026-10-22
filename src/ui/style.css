@@ -1553,3 +1553,216 @@ body.desaturate #app canvas {
 .hud-profit .muted {
   color: var(--ink-dim);
 }
+
+/* ================= FTUE: cutscene, dialog, spotlight ================= */
+.cutscene {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.cutscene.hidden {
+  display: none;
+}
+
+.cutscene .bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  animation: letterbox 0.6s ease-out;
+}
+
+.cutscene .bar.top {
+  top: 0;
+}
+
+.cutscene .bar.bottom {
+  bottom: 0;
+}
+
+@keyframes letterbox {
+  from {
+    height: 0;
+  }
+}
+
+.cutscene .skip {
+  position: absolute;
+  top: calc(11vh + 12px);
+  right: 16px;
+  pointer-events: auto;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+body.cinematic .hud {
+  display: none;
+}
+
+body.cinematic .labels {
+  opacity: 0.35;
+}
+
+/* Kotak dialog: potret + nama + teks diketik. */
+.dialogue {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(640px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(18, 20, 32, 0.92);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.dialogue.hidden {
+  display: none;
+}
+
+.dialogue.pop {
+  animation: zeus-in 0.25s ease-out;
+}
+
+.dialogue .portrait {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 3px solid #f6b26b;
+}
+
+.dialogue[data-speaker='zeus'] .portrait {
+  border-color: var(--zeus);
+}
+
+.dialogue .portrait svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dialogue.narrator .portrait {
+  display: none;
+}
+
+.dialogue .body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialogue .who {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dialogue .who b {
+  color: #f6b26b;
+  font-size: 14px;
+}
+
+.dialogue[data-speaker='zeus'] .who b {
+  color: var(--zeus);
+}
+
+.dialogue .who small {
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+
+.dialogue .who .progress {
+  margin-left: auto;
+}
+
+.dialogue .text {
+  font-size: 16px;
+  line-height: 1.4;
+  min-height: 2.8em;
+}
+
+.dialogue.narrator .text {
+  font-style: italic;
+  text-align: center;
+}
+
+.dialogue .next {
+  display: none;
+  margin-top: 4px;
+  text-align: right;
+  color: #f6b26b;
+  font-size: 12px;
+  font-weight: 800;
+  animation: urgent 0.8s steps(2) infinite;
+}
+
+.dialogue.wait .next,
+.dialogue.caption .next {
+  display: block;
+}
+
+/* Caption cutscene: di atas letterbox bawah. */
+.dialogue.caption {
+  bottom: calc(11vh + 16px);
+}
+
+/* Dialog tutorial: di bawah strip objektif. */
+.dialogue.tutorial {
+  top: 60px;
+  z-index: 6;
+}
+
+/* Spotlight: redupkan layar, angkat & sorot bagian HUD yang sedang dibahas. */
+.hud-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: rgba(5, 6, 14, 0.42);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.hud-dim.show {
+  opacity: 1;
+}
+
+.lifted {
+  z-index: 5;
+}
+
+.spotlight {
+  border-radius: 10px;
+  animation: spotlight 1.1s ease-in-out infinite;
+}
+
+@keyframes spotlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #f6b26b, 0 0 12px 2px rgba(246, 178, 107, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 4px #f6b26b, 0 0 26px 8px rgba(246, 178, 107, 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight,
+  .dialogue .next {
+    animation: none;
+    box-shadow: 0 0 0 3px #f6b26b;
+  }
+}

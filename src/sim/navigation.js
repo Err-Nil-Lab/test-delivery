@@ -181,6 +181,8 @@ export class Navigator {
   pickTarget(game) {
     const { car, packages, clock } = game;
     const hq = game.world.hq.spawn;
+    // Hari Pelatihan: langkah tutorial boleh menentukan tujuannya sendiri (penanda, HQ).
+    if (game.mode === 'tutorial' && game.tutorial?.target) return { ...game.tutorial.target };
     if (clock.phase === 'storm' || clock.phase === 'limit') return game.inHQ ? null : { ...hq, kind: 'hq', label: 'HQ' };
     const express = packages.cargo.find((p) => p.type === 'express' && !p.late);
     if (express) return { ...express.dest, kind: 'express', label: express.dest.name, pkg: express, deliver: true };

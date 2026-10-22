@@ -69,6 +69,13 @@ export const SFX = {
     if (mood === 'furious') noise(c, o, { dur: 0.9, attack: 0.05, gain: 0.25, filter: 'lowpass', freq: 300, freqEnd: 60 });
   },
 
+  // Hestia: gumaman hangat bernada lebih tinggi dan lembut.
+  hestiaTalk: (c, o, { syllables = 7 } = {}) => {
+    for (let i = 0; i < syllables; i++) {
+      tone(c, o, { freq: 260 + Math.random() * 90, freqEnd: 240 + Math.random() * 80, type: 'triangle', dur: 0.06, gain: 0.07, delay: i * 0.08 });
+    }
+  },
+
   // ---------- Penghuni map ----------
   honk: (c, o, { rival = false } = {}) => {
     const f = rival ? 660 : 420;

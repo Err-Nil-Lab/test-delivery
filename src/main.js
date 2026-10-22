@@ -10,6 +10,8 @@ import { createDebugPanel } from './ui/debug.js';
 import { AudioEngine } from './audio/audio.js';
 import { ZeusCam } from './ui/zeusCam.js';
 import { loadSettings, saveSettings, applySettings } from './ui/settings.js';
+import { Cutscene, openingShots } from './ui/cutscene.js';
+import { Dialogue } from './ui/dialogue.js';
 
 const STEP = 1 / 60;
 const params = new URLSearchParams(window.location.search);
@@ -38,7 +40,45 @@ const zeusCam = new ZeusCam(hud.zeusSlot, game, {
   calm: params.has('calm'),
   onSpeak: (mood, text) => audio.play('zeusTalk', { mood, syllables: Math.min(10, 3 + Math.round(text.length / 6)) }),
 });
+// Suara bicara karakter di cutscene & dialog tutorial.
+const speak = (voice, text, mood) => {
+  const syllables = Math.min(10, 3 + Math.round(text.length / 6));
+  if (voice === 'zeus') audio.play('zeusTalk', { mood, syllables });
+  if (voice === 'hestia') audio.play('hestiaTalk', { syllables });
+};
+// Dibuat sebelum handler keydown utama supaya Enter/Esc saat cutscene tidak ikut membuka pause.
+const cutscene = new Cutscene(app, view, { onSpeak: speak });
+const tutorialDialogue = new Dialogue(hud.root, { onSpeak: speak, className: 'dialogue tutorial' });
 const screens = new Screens(app);
+
+// FTUE (cutscene + Hari Pelatihan) otomatis untuk pemain baru. ?tutorial=1 memaksa, ?tutorial=0 melewati.
+const FTUE_KEY = 'hex.ftue';
+const ftueDone = () => {
+  if (params.get('tutorial') === '1') return false;
+  if (params.get('tutorial') === '0') return true;
+  try {
+    return localStorage.getItem(FTUE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+function startFtue() {
+  screens.hide();
+  cutscene.play(openingShots(game.world)).then(() => game.beginTutorial());
+}
+game.bus.on('tutorial_step', (s) => tutorialDialogue.show({ ...s, progress: `Langkah ${s.index + 1}/${s.total}` }));
+game.bus.on('tutorial_zeus', ({ mood, text }) => zeusCam.sayText(mood, text, 3, 4));
+game.bus.on('tutorial_cinematic', ({ shots }) => {
+  cutscene.play(shots.map((p) => ({ at: p, zoom: p.zoom, seconds: p.seconds, speaker: 'narrator', text: p.caption })));
+});
+game.bus.on('tutorial_done', () => {
+  tutorialDialogue.hide();
+  try {
+    localStorage.setItem(FTUE_KEY, '1');
+  } catch {
+    // penyimpanan diblokir: pelatihan muncul lagi di sesi berikutnya
+  }
+});
 // Pengaturan pemain (menu di layar pause, disimpan di browser; parameter URL menimpa untuk sesi ini).
 const settings = loadSettings(game.cfg, params);
 const applyAll = () => applySettings(settings, { game, view, audio, zeusCam });
@@ -55,11 +95,18 @@ let paused = false;
 const downloadLog = () => downloadJSON({ seed, ...game.telemetry.toJSON() }, `hermes-express-playtest-${seed}.json`);
 
 function showIntro() {
+  const trained = ftueDone();
   screens.showIntro({
+    trained,
     onStart: () => {
+      if (!trained) {
+        startFtue();
+        return;
+      }
       screens.hide();
       game.beginDay();
     },
+    onTutorial: startFtue,
   });
 }
 
@@ -87,6 +134,14 @@ function showPauseMenu() {
     onRestart: restartRun,
     onDownload: downloadLog,
     onSettings: () => screens.showSettings(settings, { onChange: setSetting, onBack: showPauseMenu }),
+    onSkipTutorial:
+      game.mode === 'tutorial'
+        ? () => {
+            paused = false;
+            screens.hide();
+            game.finishTutorial({ skipped: true });
+          }
+        : null,
   });
 }
 
@@ -112,6 +167,11 @@ game.bus.on('day_end', () => {
 });
 
 window.addEventListener('keydown', (e) => {
+  // Hari Pelatihan: Enter = selesaikan ketikan / lanjut dialog Hestia.
+  if (e.code === 'Enter' && game.mode === 'tutorial' && !paused && !screens.current) {
+    if (tutorialDialogue.typing) tutorialDialogue.finish();
+    else game.tutorial?.confirm();
+  }
   if (e.code === 'Escape') togglePause();
   if (e.code === 'KeyM') hud.toast(audio.toggleMute() ? '🔇 Suara mati (M)' : '🔊 Suara nyala (M)', '', 1.5);
   if (e.code === 'KeyH') {
@@ -129,7 +189,8 @@ let acc = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
-  if (game.run.state === RUN_STATE.DAY && !paused) {
+  // Simulasi berhenti saat pause dan selama cutscene / pan kamera tutorial.
+  if (game.run.state === RUN_STATE.DAY && !paused && !cutscene.playing) {
     acc += view.juice.simDelta(dt) * game.timeScale; // hitstop: simulasi berhenti sesaat
     while (acc >= STEP && game.run.state === RUN_STATE.DAY) {
       game.step(STEP, input.controls());
@@ -139,6 +200,8 @@ function frame(now) {
     acc = 0;
     input.clearPresses();
   }
+  cutscene.update(dt);
+  tutorialDialogue.update(dt);
   view.update(dt);
   hud.update(dt);
   zeusCam.update(dt, { paused });
@@ -157,6 +220,7 @@ window.__hex = {
   view,
   audio,
   zeusCam,
+  cutscene,
   state: () => ({
     run: game.run.state,
     day: game.run.day,

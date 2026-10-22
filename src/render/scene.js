@@ -100,6 +100,9 @@ export class View {
     this.fx = new EventFx({ game, particles: this.particles, popups: this.popups, juice: this.juice, carView: this.carView });
 
     this.target = new THREE.Vector3(game.car.x, 0, game.car.z);
+    // Kamera sinematik (cutscene / pan tutorial): { x, z, zoom } menggantikan kamera-ikut-van.
+    this.cinematic = null;
+    this.camZoom = 1;
     this.flash = 0;
     game.bus.on('strike', (s) => {
       const d = Math.hypot(s.x - game.car.x, s.z - game.car.z);
@@ -132,6 +135,10 @@ export class View {
     this.camera.updateProjectionMatrix();
   }
 
+  snapTo(p) {
+    this.target.set(p.x, this.game.world.heightAt(p.x, p.z), p.z);
+  }
+
   snapCamera() {
     const { car, world } = this.game;
     this.target.set(car.x, car.y ?? world.heightAt(car.x, car.z), car.z);
@@ -140,9 +147,12 @@ export class View {
   update(dt) {
     const { car, clock, world } = this.game;
 
-    // Kamera mengikuti van dengan sedikit look-ahead ke arah gerak.
-    const desired = new THREE.Vector3(car.x + car.vx * 0.4, car.y ?? world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
-    this.target.lerp(desired, 1 - Math.exp(-4 * dt));
+    // Kamera mengikuti van dengan sedikit look-ahead ke arah gerak (atau target sinematik saat cutscene).
+    const cin = this.cinematic;
+    const desired = cin
+      ? new THREE.Vector3(cin.x, world.heightAt(cin.x, cin.z), cin.z)
+      : new THREE.Vector3(car.x + car.vx * 0.4, car.y ?? world.heightAt(car.x, car.z), car.z + car.vz * 0.4);
+    this.target.lerp(desired, 1 - Math.exp(-(cin ? cin.speed ?? 1.8 : 4) * dt));
     // Dionysus: kamera ikut oleng pelan.
     const sway = this.game.effects?.steerDelay && !this.calm ? this.game.cfg.curse.effects.dionysus.cameraSway : 0;
     this.swayTime = (this.swayTime ?? 0) + dt;
@@ -155,7 +165,8 @@ export class View {
     this.camera.position.x += shake.x;
     this.camera.position.z += shake.z;
     this.camera.lookAt(this.target.x + shake.x, this.target.y, this.target.z + shake.z);
-    const zoom = 1 + this.juice.zoom;
+    this.camZoom += ((cin ? cin.zoom ?? 1 : 1) - this.camZoom) * (1 - Math.exp(-2 * dt));
+    const zoom = this.camZoom + (cin ? 0 : this.juice.zoom);
     if (this.camera.zoom !== zoom) {
       this.camera.zoom = zoom;
       this.camera.updateProjectionMatrix();

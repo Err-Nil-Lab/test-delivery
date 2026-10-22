@@ -6,7 +6,7 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
-  await page.goto('/?seed=7');
+  await page.goto('/?seed=7&tutorial=0');
   await expect(page.getByRole('button', { name: /Mulai/ })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(page.locator('.hud-clock')).toContainText('06:');
@@ -73,7 +73,7 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
 test('audio: menyala setelah input pertama, musik & mesin berjalan, M untuk mute', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('/?seed=3');
+  await page.goto('/?seed=3&tutorial=0');
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__hex.audio.ctx?.state)).toBe('running');
   await page.keyboard.down('KeyW');
@@ -95,5 +95,90 @@ test('audio: menyala setelah input pertama, musik & mesin berjalan, M untuk mute
 
   await page.keyboard.press('KeyM');
   await expect.poll(() => page.evaluate(() => window.__hex.audio.master.gain.value), { timeout: 3000 }).toBeLessThan(0.01);
+  expect(errors).toEqual([]);
+});
+
+test('FTUE: cutscene → Hari Pelatihan bersama Hestia → Day 1', async ({ page }) => {
+  test.setTimeout(240_000); // banyak langkah; headless swiftshader bisa sangat lambat
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?seed=5&tutorial=1');
+  await expect(page.locator('.screen.intro')).toBeVisible();
+  await page.keyboard.press('Enter');
+
+  // Cutscene: letterbox + caption, bisa dilewati dengan Esc.
+  await expect(page.locator('.cutscene')).toBeVisible();
+  await expect(page.locator('.dialogue.caption .text')).not.toBeEmpty();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.cutscene')).toBeHidden();
+
+  // Hari Pelatihan: dialog Hestia + label PELATIHAN.
+  const dialog = page.locator('.dialogue.tutorial');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.name')).toHaveText('Hestia');
+  await expect(page.locator('.hud-day')).toContainText('PELATIHAN');
+
+  // Jalankan semua langkah seperti pemain (teleport + E / Enter).
+  const stepId = () => page.evaluate(() => window.__hex.game.tutorial?.step?.id ?? null);
+  const stopAt = (key) =>
+    page.evaluate((k) => {
+      const g = window.__hex.game;
+      const t = g.tutorial;
+      const p = k === 'pickup' ? t.pkg.pickup : k === 'dest' ? t.pkg.dest : k === 'hq' ? g.world.hq.spawn : t.target;
+      g.car.reset({ x: p.x, z: p.z, heading: 0 });
+    }, key);
+  // Tekan E lalu tunggu sampai simulasi benar-benar memprosesnya (headless bisa sangat lambat).
+  const pressE = async (until, arg) => {
+    await page.keyboard.press('KeyE');
+    await expect.poll(() => page.evaluate(until, arg), { timeout: 30_000 }).toBe(true);
+  };
+  const leftStep = (stepName) => window.__hex.game.tutorial?.step?.id !== stepName;
+  const picked = () => {
+    const g = window.__hex.game;
+    return g.packages.cargo.includes(g.tutorial.pkg);
+  };
+
+  for (let guard = 0; guard < 20; guard++) {
+    const id = await stepId();
+    if (!id) break;
+    const wait = await page.evaluate(() => window.__hex.game.tutorial.step.waitConfirm ?? false);
+    if (wait) {
+      await page.keyboard.press('Enter'); // selesaikan ketikan
+      await page.keyboard.press('Enter'); // lanjut
+      if (id === 'zeus') {
+        // Pan kamera ke istana & plant: lewati.
+        if (await page.locator('.cutscene').isVisible()) await page.keyboard.press('Escape');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+      }
+    } else if (id === 'drive') await stopAt('target');
+    else if (id === 'gps') await stopAt('pickup');
+    else if (id === 'pickup') {
+      await stopAt('pickup');
+      await pressE(leftStep, 'pickup');
+    } else if (id === 'deliver') {
+      await stopAt('dest');
+      await pressE(leftStep, 'deliver');
+    } else if (id === 'fragile' || id === 'express') {
+      await stopAt('pickup');
+      await pressE(picked);
+      await stopAt('dest');
+      await pressE(leftStep, id);
+    } else if (id === 'home') {
+      await page.evaluate(() => {
+        const g = window.__hex.game;
+        g.car.reset({ ...g.world.ref.outsideHQ, heading: 0 });
+      });
+      await expect.poll(() => page.evaluate(() => window.__hex.game.leftHQ), { timeout: 30_000 }).toBe(true);
+      await stopAt('hq');
+      await pressE(() => window.__hex.game.mode === 'normal');
+    }
+    await expect.poll(stepId, { timeout: 30_000 }).not.toBe(id);
+  }
+
+  await expect(page.locator('.hud-day')).toContainText('DAY 1');
+  await expect(page.locator('.dialogue.tutorial')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('hex.ftue'))).toBe('1');
   expect(errors).toEqual([]);
 });

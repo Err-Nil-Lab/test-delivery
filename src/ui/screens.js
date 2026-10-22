@@ -44,7 +44,8 @@ export class Screens {
     this.overlay.innerHTML = '';
   }
 
-  showIntro({ onStart }) {
+  // trained: pemain sudah pernah menyelesaikan pelatihan → tombol "Ulangi pelatihan".
+  showIntro({ onStart, onTutorial = null, trained = false }) {
     this.show(
       'intro',
       `<p class="eyebrow">Graybox prototype</p>
@@ -57,9 +58,10 @@ export class Screens {
         <li>Berhenti di lingkaran + <kbd>E</kbd> ambil / antar paket</li>
         <li><kbd>Esc</kbd> pause &amp; pengaturan</li>
       </ul>
-      <p class="muted">Trik lain (drift, combo, paket aneh) dijelaskan saat pertama kali kamu temui.</p>
-      <button data-action="start" data-primary>Mulai (Enter)</button>`,
-      { start: onStart },
+      <p class="muted">${trained ? 'Trik lain (drift, combo, dll.) dijelaskan saat pertama kali kamu temui.' : 'Hestia akan memandumu di Hari Pelatihan sebelum Day 1.'}</p>
+      <button data-action="start" data-primary>Mulai (Enter)</button>
+      ${trained && onTutorial ? '<button data-action="tutorial" class="secondary">🎓 Ulangi pelatihan</button>' : ''}`,
+      { start: onStart, ...(onTutorial ? { tutorial: onTutorial } : {}) },
     );
   }
 
@@ -160,15 +162,16 @@ export class Screens {
     }
   }
 
-  showPause({ onResume, onRestart, onDownload, onSettings }) {
+  showPause({ onResume, onRestart, onDownload, onSettings, onSkipTutorial = null }) {
     this.show(
       'pause',
       `<h2>Pause</h2>
       <button data-action="resume" data-primary>Lanjut (Enter / Esc)</button>
+      ${onSkipTutorial ? '<button data-action="skiptutorial" class="secondary">⏭ Lewati pelatihan</button>' : ''}
       <button data-action="settings" class="secondary">Pengaturan</button>
       <button data-action="restart" class="secondary">Ulang run dari Day 1</button>
       <button data-action="download" class="secondary">Unduh log playtest</button>`,
-      { resume: onResume, settings: onSettings, restart: onRestart, download: onDownload },
+      { resume: onResume, settings: onSettings, restart: onRestart, download: onDownload, ...(onSkipTutorial ? { skiptutorial: onSkipTutorial } : {}) },
     );
   }
 

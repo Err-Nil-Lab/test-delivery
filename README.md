@@ -52,6 +52,7 @@ URL bisa diberi parameter:
 |---|---|
 | `?seed=123` | Run deterministik: spawn paket dan petir sama persis setiap kali |
 | `?debug=1` | Panel debug langsung terbuka (bisa juga dibuka dengan tombol <kbd>`</kbd>) |
+| `?tutorial=1` / `?tutorial=0` | Paksa / lewati FTUE (cutscene + Hari Pelatihan) |
 | `?zeus=0` | Matikan reaksi "Zeus LIVE" di pojok layar |
 | `?npc=0` | Map tanpa penghuni (tanpa lalu lintas, pejalan kaki, hewan, burung) |
 | `?drift=0` | Drift/handbrake mati (setir normal). `?drift=1` menyalakannya |
@@ -69,6 +70,37 @@ URL bisa diberi parameter:
 | <kbd>Esc</kbd> | Pause: **Pengaturan**, ulang run, unduh log playtest |
 | <kbd>M</kbd> | Mute / unmute suara |
 | <kbd>Enter</kbd> | Tombol utama di layar intro/laporan |
+
+## FTUE: cutscene pembuka + Hari Pelatihan
+
+Pemain baru tidak langsung dilempar ke Day 1 dengan semua sistem sekaligus.
+
+**1. Cutscene** ([`src/ui/cutscene.js`](src/ui/cutscene.js)), ±30 detik dengan kamera sinematik, letterbox, dan caption ber-potret:
+- **Isi:** Zeus murka karena kado Hera dikirim ke Hades dan mencabut status Hermes. Hestia, manajer HQ Hermes Express, menyambut. Lalu tur singkat ke Kota, Perumahan, Padang Minotaur, dan Electrical Plant.
+- **Kontrol:** <kbd>Enter</kbd> = lanjut, <kbd>Esc</kbd> / "Lewati" = lewati.
+
+**2. Hari Pelatihan** ([`src/sim/tutorial.js`](src/sim/tutorial.js)), dipandu Hestia di dunia yang tenang:
+- **Kondisi dunia:** jam berhenti di 08:00, tanpa petir, Minotaur, dan Iris, lalu lintas sepi, dan paket hanya muncul dari langkah tutorial.
+- **Tampilan:** dialog Hestia (potret + teks diketik + "Langkah n/10"), strip objektif 🎓, dan **spotlight** yang menyorot bagian HUD yang dibahas sementara sisanya diredupkan.
+
+| # | Langkah | Selesai saat |
+|---|---|---|
+| 1 | Sambutan | <kbd>Enter</kbd> |
+| 2 | Menyetir ke penanda biru | van masuk penanda |
+| 3 | Ikuti GPS ke paket | sampai di lingkaran |
+| 4 | Berhenti + <kbd>E</kbd> ambil (spotlight prompt) | paket diambil |
+| 5 | Antar ke tujuan (spotlight cargo) | paket diantar |
+| 6 | Bar PROFIT & quota (spotlight) | <kbd>Enter</kbd> |
+| 7 | Paket rapuh 🏺: antar tanpa menabrak (pecah = paket baru) | diantar |
+| 8 | Paket kilat ⏱️: waktu ×1,5 (telat tetap lulus) | diantar |
+| 9 | Paket Zeus: pan kamera ke Gerbang Istana & Electrical Plant, Zeus LIVE nyeletuk | <kbd>Enter</kbd> |
+| 10 | Bar waktu (senja 18:00, badai 20:00) → pulang ke HQ + <kbd>E</kbd> | selesai → Day 1 |
+
+**3. Day 1** (paket Zeus pertama) dimulai bersih: uang dan damage dari latihan tidak dibawa.
+
+- **Hanya sekali:** FTUE otomatis hanya untuk pemain baru (disimpan di browser, `hex.ftue`).
+- **Mengulang:** intro menampilkan "🎓 Ulangi pelatihan".
+- **Melewati:** pause punya "⏭ Lewati pelatihan".
 
 ## Membaca layar (HUD)
 
@@ -336,6 +368,7 @@ src/
     style.js       bonus gaya: aksi berani → combo → tip
     upgrades.js    Bengkel Hephaestus (upgrade) + titah dewa harian
     rival.js       Iris Express: mengincar, mencuri, menjatuhkan paket
+    tutorial.js    Hari Pelatihan (FTUE): langkah-langkah Hestia
     lanes.js       lajur mobil (loop per jalan) dan trotoar untuk NPC
     traffic.js     lalu lintas NPC: ikut lajur, mengerem, menyalip, terpental saat ditabrak
     crowd.js       pejalan kaki & hewan: berjalan, menyeberang, menghindar, kabur, pulang saat badai
@@ -350,7 +383,7 @@ src/
   render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur, NPC & burung,
                    juice (shake/hitstop/zoom), particle pool, teks melayang, efek per event
   audio/           WebAudio: synth, resep SFX, mesin van, musik prosedural
-  ui/              HUD, minimap, Zeus LIVE (reaksi Zeus), layar intro/laporan/menang/pause, panel debug
+  ui/              HUD, minimap, Zeus LIVE, cutscene & dialog (Hestia), layar intro/laporan/bengkel/pause, panel debug
 tests/             unit test (Vitest)
 e2e/               smoke test di browser (Playwright)
 ```
