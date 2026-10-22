@@ -102,6 +102,22 @@ Pemain baru tidak langsung dilempar ke Day 1 dengan semua sistem sekaligus.
 - **Mengulang:** intro menampilkan "🎓 Ulangi pelatihan".
 - **Melewati:** pause punya "⏭ Lewati pelatihan".
 
+## Tengah malam: hukuman Zeus
+
+Kalau jam menyentuh **24:00 dan van masih di luar HQ**, tidak ada lagi derek mendadak. Urutannya (±12 detik, [`src/sim/midnight.js`](src/sim/midnight.js)):
+
+| Tahap | Kejadian |
+|---|---|
+| Peringatan (±1,8 dtk) | Lonceng 12 dentang, banner "🌩 TENGAH MALAM", langit memerah, kontrol van dikunci. Lingkaran peringatan raksasa mengisi di bawah van dengan dengung listrik. Zeus LIVE: "TENGAH MALAM! WAKTUMU HABIS, MORTAL!" |
+| **Sambaran raksasa** | Kolom petir lebar dari langit, layar putih, hitstop dan shake maksimal, guntur panjang. **Pasti kena**: tidak bisa dihindari dan tidak bisa ditahan blessing maupun penangkal petir |
+| Lumpuh (±2,6 dtk) | Van gosong, berasap, percikan listrik, bintang pusing berputar, mesin mati. Zeus tertawa |
+| Derek | Mobil derek oranye tiba dari sisi HQ ("DEREK! 🚛"), mengait van, lalu menyeretnya ke HQ sambil layar memudar ke hitam |
+| Laporan | Hari berakhir dengan baris **Biaya derek**; paket yang masih dibawa tetap kena denda belum diantar |
+
+- **Di HQ saat 24:00: aman.** Tanpa sambaran dan tanpa derek, hari berakhir normal seperti menekan <kbd>E</kbd>. (Sebelumnya biaya derek berlaku walau van sudah di HQ.)
+- Jam dan musik berhenti selama urutan; hanya guntur, mesin mati, dan klakson derek yang terdengar.
+- Semua durasi dan radius ada di `midnight` di `src/config.js`; `midnight.enabled: false` mengembalikan derek instan.
+
 ## Membaca layar (HUD)
 
 HUD disusun dalam 3 tingkat ([`src/ui/hud.js`](src/ui/hud.js)), supaya yang penting terbaca sekali lirik:
@@ -369,6 +385,7 @@ src/
     upgrades.js    Bengkel Hephaestus (upgrade) + titah dewa harian
     rival.js       Iris Express: mengincar, mencuri, menjatuhkan paket
     tutorial.js    Hari Pelatihan (FTUE): langkah-langkah Hestia
+    midnight.js    Tengah malam: petir raksasa → lumpuh → mobil derek
     lanes.js       lajur mobil (loop per jalan) dan trotoar untuk NPC
     traffic.js     lalu lintas NPC: ikut lajur, mengerem, menyalip, terpental saat ditabrak
     crowd.js       pejalan kaki & hewan: berjalan, menyeberang, menghindar, kabur, pulang saat badai

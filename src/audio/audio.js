@@ -92,8 +92,10 @@ export class AudioEngine {
     const { game } = this;
     const inDay = game.run.state === 'day' && !paused;
     const fx = game.effects ?? game.packages.effects;
-    this.engine.update(dt, { car: game.car, damageState: game.damage.state, active: inDay });
-    this.music.setMood(inDay ? (game.clock.phase === 'day' ? 'day' : game.clock.phase === 'dusk' ? 'dusk' : 'storm') : null);
+    this.engine.update(dt, { car: game.car, damageState: game.damage.state, active: inDay && !game.car.paralyzed }); // mesin mati saat lumpuh
+    // Tengah malam: musik berhenti total dari sambaran sampai laporan (hanya guntur & derek).
+    const hushed = game.midnight.active && ['paralyzed', 'arrive', 'hook', 'tow'].includes(game.midnight.phase);
+    this.music.setMood(inDay && !hushed ? (game.clock.phase === 'day' ? 'day' : game.clock.phase === 'dusk' ? 'dusk' : 'storm') : null);
     this.music.setModifiers({ dark: Boolean(fx.visionRadius), drunk: fx.steerDelay > 0 });
     this.music.update();
     // Paket kilat: detak tiap detik di 5 detik terakhir.

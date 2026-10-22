@@ -60,6 +60,8 @@ describe('Alur run', () => {
     game.god = true;
     game.clock.setHour(23.9);
     stepFor(game, 2);
+    expect(game.midnight.active).toBe(true); // petir raksasa dulu, baru diderek
+    stepFor(game, 20);
     expect(game.run.state).toBe(RUN_STATE.REPORT);
     expect(game.run.lastReport.towFee).toBe(game.cfg.damage.towFee);
   });

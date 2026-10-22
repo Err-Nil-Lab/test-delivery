@@ -68,6 +68,8 @@ export class Hud {
     this.hints = [];
     this.hintTimer = 0;
     this.bannerEl = el('div', 'hud-banner', this.root);
+    // Fade ke hitam saat van diseret, sebelum laporan akhir hari.
+    this.fadeEl = el('div', 'hud-fade', this.root);
 
     this.vignetteEl = el('div', 'hud-vignette', this.root);
     el('div', 'hud-storm-edge', this.root);
@@ -86,6 +88,12 @@ export class Hud {
       if (phase === PHASE.DUSK) this.banner('SENJA', 'Pulang ke HQ!', 'dusk', 2.5);
       if (phase === PHASE.STORM) this.banner('BADAI ZEUS MEMBURU', 'Pulang ke HQ sekarang!', 'storm', 2.5);
     });
+    bus.on('midnight_start', () => {
+      this.banner('🌩 TENGAH MALAM', 'Waktumu habis. Zeus menjatuhkan hukumannya…', 'storm', 4);
+      this.setSpotlight(null);
+    });
+    bus.on('midnight_tow_start', () => this.fadeEl.classList.add('show'));
+    bus.on('day_start', () => this.fadeEl.classList.remove('show'));
     bus.on('blessing_lost', () => this.banner('The blessing belonged to the package, not you.', 'Blessing Zeus hilang. Petir bisa mengenaimu lagi.', 'lost', 3.5));
     bus.on('fragile_broken', ({ lost }) => {
       this.banner('🏺 PECAH!', `Paket rapuh hancur. $${lost} melayang.`, 'lost', 2);
@@ -435,7 +443,8 @@ export class Hud {
     this.objectiveEl.classList.toggle('show', objective !== '');
     this.updateDarkness(game.effects.visionRadius);
 
-    const prompt = this.promptText();
+    // Selama urutan tengah malam, tidak ada prompt E.
+    const prompt = game.midnight.active ? '' : this.promptText();
     this.setHtml(this.promptEl, prompt);
     this.promptEl.classList.toggle('show', prompt !== '');
 

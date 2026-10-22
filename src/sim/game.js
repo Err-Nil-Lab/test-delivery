@@ -16,6 +16,7 @@ import { Navigator } from './navigation.js';
 import { RivalSystem } from './rival.js';
 import { UPGRADES, DAY_MODS, MUTABLE_SECTIONS, restoreInPlace } from './upgrades.js';
 import { TutorialDirector, TUTORIAL_QUOTA } from './tutorial.js';
+import { MidnightSequence } from './midnight.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -27,6 +28,7 @@ export class Game {
     this.baseCfg = Object.fromEntries(MUTABLE_SECTIONS.map((k) => [k, structuredClone(config[k])]));
     this.dayMods = {};
     this.rodCharges = 0;
+    this.midnight = new MidnightSequence(this, config.midnight);
     this.mode = 'normal'; // 'tutorial' selama Hari Pelatihan
     this.tutorial = null;
     this.seed = seed;
@@ -170,6 +172,8 @@ export class Game {
     this.resetNpcs();
     this.style.reset();
     this.rival.reset();
+    this.midnight.reset();
+    this.car.paralyzed = false;
     this.packages.resetDay({ scripted: run.scripted, day: run.day, near: this.car });
     this.steerHistory = [];
     this.collisionCooldown = 0;
@@ -282,6 +286,9 @@ export class Game {
     const hour = this.clock.hour;
 
     this.effects = this.packages.effects;
+    const midnight = this.midnight.active;
+    // Selama urutan tengah malam kontrol van dikunci.
+    if (midnight) controls = { throttle: 0, steer: 0, handbrake: false, interact: false };
     const impacts = this.car.update(dt, this.drunkControls(controls), {
       heightAt: this.world.heightAt,
       slopeAt: this.world.slopeAt,
@@ -320,12 +327,12 @@ export class Game {
 
     const training = this.mode === 'tutorial';
     // Hari Pelatihan: jam berhenti.
-    const phase = training ? null : this.clock.update(dt * this.effects.clockMultiplier); // Chronos
+    const phase = training || midnight ? null : this.clock.update(dt * this.effects.clockMultiplier); // Chronos (berhenti di 24:00 saat urutan tengah malam)
     if (phase) this.bus.emit('phase', { phase });
 
     this.packages.update(dt, this.car, hour);
 
-    const hits = training ? [] : this.hazards.update(dt, {
+    const hits = training || midnight ? [] : this.hazards.update(dt, {
       car: this.car,
       phase: this.clock.phase,
       stormElapsed: this.clock.stormElapsed,
@@ -355,7 +362,7 @@ export class Game {
     const mcfg = this.cfg.minotaur;
     const rams = this.minotaurs.update(dt, {
       car: this.car,
-      active: !training && this.run.day >= mcfg.activeFromDay,
+      active: !training && !midnight && this.run.day >= mcfg.activeFromDay,
       mode: this.effects.minotaurMode,
     });
     for (const ram of rams) {
@@ -380,6 +387,7 @@ export class Game {
     this.style.update(dt, { car: this.car, npcCars: this.traffic.cars });
     this.nav.update(dt, this);
     if (training) this.tutorial.update(dt);
+    this.midnight.update(dt);
 
     while (this.pendingHints.length && this.pendingHints[0].at <= this.clock.elapsed) {
       this.bus.emit('hint', { text: this.pendingHints.shift().text });
@@ -387,7 +395,22 @@ export class Game {
 
     if (controls.interact) this.interact();
 
-    if (this.clock.phase === PHASE.LIMIT && this.run.state === RUN_STATE.DAY) this.endDay({ towed: true });
+    if (this.clock.phase === PHASE.LIMIT && this.run.state === RUN_STATE.DAY) this.midnightReached();
+    if (this.midnight.phase === 'done' && this.run.state === RUN_STATE.DAY) this.endDay({ towed: true });
+  }
+
+  // Jam menyentuh 24:00. Di HQ: aman, hari berakhir normal. Di luar: petir raksasa Zeus, lumpuh, diderek.
+  midnightReached() {
+    if (this.midnight.phase !== 'idle') return;
+    if (this.inHQ) {
+      this.endDay({ towed: false });
+      return;
+    }
+    if (!this.cfg.midnight.enabled) {
+      this.endDay({ towed: true });
+      return;
+    }
+    this.midnight.start();
   }
 
   // Terjun dari undakan: biaya repair sesuai kecepatan jatuh di atas batas aman.
