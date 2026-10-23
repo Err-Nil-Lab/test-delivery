@@ -56,7 +56,7 @@ export class Screens {
       <ul class="controls">
         <li><kbd>W</kbd><kbd>S</kbd> gas & rem · <kbd>A</kbd><kbd>D</kbd> belok</li>
         <li>Berhenti di lingkaran + <kbd>E</kbd> ambil / antar paket</li>
-        <li><kbd>Esc</kbd> pause &amp; pengaturan</li>
+        <li><kbd>V</kbd> ganti kamera (isometric / third person) · <kbd>Esc</kbd> pause &amp; pengaturan</li>
       </ul>
       <p class="muted">${trained ? 'Trik lain (drift, combo, dll.) dijelaskan saat pertama kali kamu temui.' : 'Hestia akan memandumu di Hari Pelatihan sebelum Day 1.'}</p>
       <button data-action="start" data-primary>Mulai (Enter)</button>

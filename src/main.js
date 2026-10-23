@@ -178,6 +178,10 @@ window.addEventListener('keydown', (e) => {
     setSetting('drift', !settings.drift);
     hud.toast(settings.drift ? '🛞 Drift nyala: tahan Space (H)' : '🚐 Drift mati: setir normal (H)', '', 1.8);
   }
+  if (e.code === 'KeyV') {
+    setSetting('chase', !settings.chase);
+    hud.toast(settings.chase ? '🎥 Third person (V)' : '🎥 Isometric (V)', '', 1.5);
+  }
   if (e.code === 'KeyG') {
     setSetting('gps', !settings.gps);
     hud.toast(settings.gps ? '🧭 GPS nyala (G)' : '🧭 GPS mati (G)', '', 1.5);

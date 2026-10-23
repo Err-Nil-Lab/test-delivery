@@ -77,6 +77,7 @@ export class Hud {
     // Hades: pandangan menyempit ke lingkaran di sekitar van.
     this.darknessEl = el('div', 'hud-darkness', this.root);
     this.minimap = new Minimap(this.root, game);
+    this.minimap.view = view; // minimap ikut diputar saat kamera third person
     this.bannerTimer = 0;
     this.hitTimer = 0;
     this.lastText = new Map();

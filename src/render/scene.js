@@ -15,6 +15,7 @@ import { CrowdView } from './crowdView.js';
 import { Birds } from './birds.js';
 import { RouteView } from './routeView.js';
 import { TowView } from './towView.js';
+import { chasePose, targetYaw, smoothYaw } from './chaseCam.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
@@ -68,7 +69,14 @@ export class View {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(LIGHT_KEYS[1].sky);
-    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 500);
+    // Dua kamera: isometric (ortografis) dan third person (perspektif di belakang van). this.camera = yang aktif.
+    this.isoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 500);
+    this.chaseCamera = new THREE.PerspectiveCamera(62, 1, 0.5, 600);
+    this.camera = this.isoCamera;
+    this.perspective = 'iso'; // 'iso' | 'chase' (pilihan pemain)
+    this.chaseYaw = game.car.heading;
+    this.camOffset = new THREE.Vector3(ISO_OFFSET.x, ISO_OFFSET.y, ISO_OFFSET.z);
+    this.chaseFog = new THREE.Fog('#a9d4ef', 110, 360);
 
     this.hemi = new THREE.HemisphereLight('#ffffff', '#6b6457', 1.2);
     this.scene.add(this.hemi);
@@ -138,11 +146,25 @@ export class View {
     this.renderer.setSize(w, h);
     this.labels.setSize(w, h);
     const aspect = w / h;
-    this.camera.left = (-VIEW_HEIGHT * aspect) / 2;
-    this.camera.right = (VIEW_HEIGHT * aspect) / 2;
-    this.camera.top = VIEW_HEIGHT / 2;
-    this.camera.bottom = -VIEW_HEIGHT / 2;
-    this.camera.updateProjectionMatrix();
+    const iso = this.isoCamera;
+    iso.left = (-VIEW_HEIGHT * aspect) / 2;
+    iso.right = (VIEW_HEIGHT * aspect) / 2;
+    iso.top = VIEW_HEIGHT / 2;
+    iso.bottom = -VIEW_HEIGHT / 2;
+    iso.updateProjectionMatrix();
+    this.chaseCamera.aspect = aspect;
+    this.chaseCamera.updateProjectionMatrix();
+  }
+
+  // 'iso' | 'chase'. Cutscene & pan tutorial selalu memakai isometric sementara.
+  setPerspective(mode) {
+    if (mode === this.perspective) return;
+    this.perspective = mode;
+    this.chaseYaw = this.game.car.heading;
+  }
+
+  get chase() {
+    return this.perspective === 'chase' && !this.cinematic;
   }
 
   snapTo(p) {
@@ -171,16 +193,34 @@ export class View {
     // Juice: guncangan kamera dan zoom kick (tidak memengaruhi target supaya tidak bergeser).
     this.juice.update(dt);
     const shake = this.juice.offset;
-    this.camera.position.copy(this.target).add(ISO_OFFSET);
-    this.camera.position.x += shake.x;
-    this.camera.position.z += shake.z;
-    this.camera.lookAt(this.target.x + shake.x, this.target.y, this.target.z + shake.z);
-    this.camZoom += ((cin ? cin.zoom ?? 1 : 1) - this.camZoom) * (1 - Math.exp(-2 * dt));
-    const zoom = this.camZoom + (cin ? 0 : this.juice.zoom);
-    if (this.camera.zoom !== zoom) {
-      this.camera.zoom = zoom;
-      this.camera.updateProjectionMatrix();
+    const chase = this.chase;
+    this.camera = chase ? this.chaseCamera : this.isoCamera;
+    if (chase) {
+      // Third person: kamera menempel di belakang van, arahnya menyusul arah van dengan halus.
+      const pos = { x: car.x, y: car.y ?? world.heightAt(car.x, car.z), z: car.z };
+      this.chaseYaw = smoothYaw(this.chaseYaw, targetYaw(car), dt);
+      const pose = chasePose(pos, this.chaseYaw, car.speed / this.game.cfg.car.maxSpeed);
+      this.target.set(pos.x, pos.y, pos.z); // sinkron supaya cahaya/bayangan & occlusion mengikuti van
+      this.camera.position.set(pose.position.x + shake.x, pose.position.y, pose.position.z + shake.z);
+      this.camera.lookAt(pose.look.x + shake.x, pose.look.y, pose.look.z + shake.z);
+      const fov = pose.fov / (1 + this.juice.zoom);
+      if (Math.abs(this.camera.fov - fov) > 0.01) {
+        this.camera.fov = fov;
+        this.camera.updateProjectionMatrix();
+      }
+    } else {
+      this.camera.position.copy(this.target).add(ISO_OFFSET);
+      this.camera.position.x += shake.x;
+      this.camera.position.z += shake.z;
+      this.camera.lookAt(this.target.x + shake.x, this.target.y, this.target.z + shake.z);
+      this.camZoom += ((cin ? cin.zoom ?? 1 : 1) - this.camZoom) * (1 - Math.exp(-2 * dt));
+      const zoom = this.camZoom + (cin ? 0 : this.juice.zoom);
+      if (this.camera.zoom !== zoom) {
+        this.camera.zoom = zoom;
+        this.camera.updateProjectionMatrix();
+      }
     }
+    this.camOffset.copy(this.camera.position).sub(this.target);
     this.sun.position.copy(this.target).add(SUN_OFFSET);
     this.sun.target.position.copy(this.target);
 
@@ -194,11 +234,16 @@ export class View {
       .copy(tmpA.set(a.sky).lerp(tmpB.set(b.sky), t))
       .lerp(tmpB.set('#3a0d12'), this.midnightTint * 0.85)
       .lerp(tmpB.set('#e8ecff'), Math.min(1, this.flash * 0.6));
+    // Third person: kabut warna langit menyembunyikan tepi map di cakrawala.
+    if (chase) {
+      this.chaseFog.color.copy(this.scene.background);
+      this.scene.fog = this.chaseFog;
+    } else this.scene.fog = null;
     this.sun.intensity = THREE.MathUtils.lerp(a.sun, b.sun, t) * (1 - this.midnightTint * 0.7);
     this.sun.color.copy(tmpA.set(a.sunColor).lerp(tmpB.set(b.sunColor), t));
     this.hemi.intensity = THREE.MathUtils.lerp(a.hemi, b.hemi, t) * (1 - this.midnightTint * 0.4) + this.flash * 1.5;
 
-    this.worldView.update(dt, night, car, ISO_OFFSET);
+    this.worldView.update(dt, night, car, this.camOffset);
     this.carView.update(dt, this.game, night);
     this.markersView.update(dt, this.game);
     this.hazardView.update(dt, this.game);

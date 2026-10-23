@@ -53,6 +53,7 @@ URL bisa diberi parameter:
 | `?seed=123` | Run deterministik: spawn paket dan petir sama persis setiap kali |
 | `?debug=1` | Panel debug langsung terbuka (bisa juga dibuka dengan tombol <kbd>`</kbd>) |
 | `?tutorial=1` / `?tutorial=0` | Paksa / lewati FTUE (cutscene + Hari Pelatihan) |
+| `?view=chase` / `?view=iso` | Kamera third person / isometric (hanya untuk sesi itu) |
 | `?zeus=0` | Matikan reaksi "Zeus LIVE" di pojok layar |
 | `?npc=0` | Map tanpa penghuni (tanpa lalu lintas, pejalan kaki, hewan, burung) |
 | `?drift=0` | Drift/handbrake mati (setir normal). `?drift=1` menyalakannya |
@@ -66,6 +67,7 @@ URL bisa diberi parameter:
 | <kbd>Space</kbd> (tahan) | Handbrake: van ngepot/drift. Drift lama lalu lepas = turbo |
 | <kbd>H</kbd> | Drift on/off (diingat di browser) |
 | <kbd>G</kbd> | GPS on/off |
+| <kbd>V</kbd> | Ganti kamera: isometric ⇄ third person (diingat di browser) |
 | <kbd>E</kbd> | Berhenti di penanda, lalu ambil/antar paket. Di HQ: akhiri hari |
 | <kbd>Esc</kbd> | Pause: **Pengaturan**, ulang run, unduh log playtest |
 | <kbd>M</kbd> | Mute / unmute suara |
@@ -101,6 +103,13 @@ Pemain baru tidak langsung dilempar ke Day 1 dengan semua sistem sekaligus.
 - **Hanya sekali:** FTUE otomatis hanya untuk pemain baru (disimpan di browser, `hex.ftue`).
 - **Mengulang:** intro menampilkan "🎓 Ulangi pelatihan".
 - **Melewati:** pause punya "⏭ Lewati pelatihan".
+
+## Perspektif kamera
+
+Dua pilihan, ganti kapan saja dengan <kbd>V</kbd> atau lewat <kbd>Esc</kbd> → Pengaturan:
+- **Isometric** (default): kamera ortografis dari atas, seperti biasa.
+- **Third person** (ala GTA, [`src/render/chaseCam.js`](src/render/chaseCam.js)): kamera perspektif di belakang van yang menyusul arah van dengan halus. Saat drift kamera sedikit condong ke arah gerak, dan FOV melebar seiring kecepatan. Ada kabut tipis di cakrawala, dan minimap berubah jadi bulat yang diputar supaya atas = depan van.
+- Kontrol sama di kedua mode (W/S gas dan rem, A/D belok). Cutscene dan pan tutorial otomatis memakai isometric sementara.
 
 ## Tengah malam: hukuman Zeus
 
