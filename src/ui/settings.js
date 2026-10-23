@@ -3,6 +3,7 @@
 const KEY = 'hex.settings';
 
 export const SETTINGS_FIELDS = [
+  { key: 'chase', label: 'Kamera third person (di belakang van)', hint: 'V', type: 'toggle' },
   { key: 'gps', label: 'GPS: garis rute di jalan', hint: 'G', type: 'toggle' },
   { key: 'drift', label: 'Drift / handbrake (Space)', hint: 'H', type: 'toggle' },
   { key: 'npc', label: 'Penghuni map (mobil, orang, hewan)', type: 'toggle' },
@@ -32,6 +33,7 @@ export function loadSettings(cfg, params) {
     npc: cfg.npc.enabled,
     zeus: cfg.zeusCam.enabled,
     calm: false,
+    chase: false, // false = isometric, true = third person
     master: cfg.audio.master,
     music: cfg.audio.music,
     sfx: cfg.audio.sfx,
@@ -43,6 +45,10 @@ export function loadSettings(cfg, params) {
     if (!params.has(key)) continue;
     s[key] = params.get(key) !== '0';
     overridden.add(key);
+  }
+  if (params.has('view')) {
+    s.chase = params.get('view') === 'chase';
+    overridden.add('chase');
   }
   Object.defineProperty(s, 'overridden', { value: overridden, enumerable: false });
   return s;
@@ -66,6 +72,7 @@ export function saveSettings(s, changedKey = null) {
 export function applySettings(s, { game, view, audio, zeusCam }) {
   game.car.driftEnabled = s.drift;
   game.nav.enabled = s.gps;
+  view.setPerspective(s.chase ? 'chase' : 'iso');
   if (game.npcEnabled !== s.npc) game.setNpcEnabled(s.npc);
   zeusCam.enabled = s.zeus;
   zeusCam.calm = s.calm;

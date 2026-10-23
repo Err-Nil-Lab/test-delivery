@@ -204,3 +204,22 @@ test('tengah malam: peringatan → petir raksasa → lumpuh → derek → lapora
   expect(await page.evaluate(() => window.__hex.game.run.lastReport.towed)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('kamera third person: ?view=chase, tombol V mengganti mode, tanpa error', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?seed=2&tutorial=0&view=chase');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.hud-clock')).toContainText('06:');
+  const mode = () => page.evaluate(() => ({ p: window.__hex.view.perspective, persp: Boolean(window.__hex.view.camera.isPerspectiveCamera) }));
+  expect(await mode()).toEqual({ p: 'chase', persp: true });
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(1200);
+  await page.keyboard.up('KeyW');
+  await page.keyboard.press('KeyV');
+  await expect.poll(mode, { timeout: 15_000 }).toEqual({ p: 'iso', persp: false });
+  await page.keyboard.press('KeyV');
+  await expect.poll(mode, { timeout: 15_000 }).toEqual({ p: 'chase', persp: true });
+  expect(errors).toEqual([]);
+});

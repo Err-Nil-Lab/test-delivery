@@ -166,6 +166,24 @@ export class Minimap {
     const { ctx, game } = this;
     const { car, packages, world, minotaurs } = game;
     ctx.clearRect(0, 0, SIZE, SIZE);
+    // Kamera third person: minimap bulat berpusat di van dan diputar supaya atas = depan van.
+    const follow = Boolean(this.view?.chase);
+    ctx.save();
+    if (follow) {
+      const vm = this.toMap(car.x, car.z);
+      const fwdX = Math.sin(car.heading);
+      const fwdZ = Math.cos(car.heading);
+      const vAngle = Math.atan2((fwdX + fwdZ) / Math.SQRT2, (fwdX - fwdZ) / Math.SQRT2);
+      ctx.beginPath();
+      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#242a38';
+      ctx.fill();
+      ctx.clip();
+      ctx.translate(SIZE / 2, SIZE / 2);
+      ctx.rotate(-Math.PI / 2 - vAngle);
+      ctx.scale(1.35, 1.35);
+      ctx.translate(-vm.x, -vm.y);
+    }
     ctx.drawImage(this.base, 0, 0, SIZE, SIZE);
 
     // Rute GPS.
@@ -206,5 +224,13 @@ export class Minimap {
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+    ctx.restore(); // putaran minimap third person
+    if (follow) {
+      ctx.beginPath();
+      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   }
 }
