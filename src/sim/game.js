@@ -17,6 +17,7 @@ import { RivalSystem } from './rival.js';
 import { UPGRADES, DAY_MODS, MUTABLE_SECTIONS, restoreInPlace } from './upgrades.js';
 import { TutorialDirector, TUTORIAL_QUOTA } from './tutorial.js';
 import { MidnightSequence } from './midnight.js';
+import { Autopilot } from './autopilot.js';
 import { RunState, RUN_STATE, computeReport } from './run.js';
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -29,6 +30,9 @@ export class Game {
     this.dayMods = {};
     this.rodCharges = 0;
     this.midnight = new MidnightSequence(this, config.midnight);
+    this.attract = new Autopilot(this, createRng((seed ^ 0xa11ce) >>> 0));
+    this.attractTime = 0;
+    this.attractActive = false;
     this.mode = 'normal'; // 'tutorial' selama Hari Pelatihan
     this.tutorial = null;
     this.seed = seed;
@@ -121,9 +125,74 @@ export class Game {
     if (this.run.runCount > 1) this.beginDay();
   }
 
+  // Main menu (mode pamer): van menyetir sendiri, waktu bergulir. Tidak ada damage, paket, atau run.
+  beginAttract() {
+    const w = this.world;
+    this.attractActive = true;
+    this.attractTime = 0;
+    this.attract.reset();
+    this.style.active = false; // tidak ada combo/tip di menu
+    this.car.paralyzed = false;
+    this.car.reset({ ...w.ref.outsideHQ, heading: Math.PI / 2 }); // di jalan utama, menghadap ke kota
+    this.clock.setHour(this.cfg.attract.startHour);
+    this.resetNpcs();
+    this.bus.emit('attract_start', {});
+  }
+
+  endAttract() {
+    this.attractActive = false;
+    this.style.active = true;
+  }
+
+  // Keluar dari menu tanpa langsung main (mis. cutscene pembuka): van kembali parkir di HQ, jam pagi.
+  parkAtHq() {
+    this.endAttract();
+    this.car.reset(this.world.hq.spawn);
+    this.clock.reset();
+    this.resetNpcs();
+  }
+
+  // Jam di menu: bergulir pelan dan kembali ke pagi (view memudar saat wrap lewat event).
+  attractHour() {
+    const a = this.cfg.attract;
+    return a.startHour + ((a.endHour - a.startHour) * (this.attractTime % a.cycleSeconds)) / a.cycleSeconds;
+  }
+
+  updateAttract(dt) {
+    if (!this.attractActive) return;
+    const a = this.cfg.attract;
+    const before = Math.floor(this.attractTime / a.cycleSeconds);
+    this.attractTime += dt;
+    if (Math.floor(this.attractTime / a.cycleSeconds) !== before) this.bus.emit('attract_wrap', {});
+    this.clock.setHour(this.attractHour());
+    const controls = this.attract.update(dt);
+    const impacts = this.car.update(dt, controls, {
+      heightAt: this.world.heightAt,
+      slopeAt: this.world.slopeAt,
+      speedAt: this.world.speedAt,
+      colliders: this.world.nearbyColliders,
+      dynamic: this.traffic.colliders(),
+    });
+    for (const { speed, collider } of impacts) if (collider.npcCar) this.traffic.bump(collider.npcCar, this.car, speed);
+    // Peristiwa drift ikut diteruskan (popup, asap, suara decit) seperti di permainan.
+    for (const e of this.car.events) {
+      if (e.type === 'drift_start') this.bus.emit('drift_start', {});
+      else {
+        this.bus.emit('drift_end', { seconds: round2(e.seconds), tier: e.tier });
+        if (e.tier >= 0) this.bus.emit('drift_boost', { tier: e.tier });
+      }
+    }
+    this.car.events.length = 0;
+    if (this.npcEnabled) {
+      this.traffic.update(dt, { van: this.car, phase: 'day', walkers: this.crowd.walkers(), scare: (p, c) => this.crowd.scare(p, c) });
+      this.crowd.update(dt, { van: this.car, phase: 'day' });
+    }
+  }
+
   // Hari Pelatihan (FTUE): dunia yang tenang, langkah dipandu Hestia. Selesai → Day 1 seperti biasa.
   beginTutorial() {
     const { run } = this;
+    this.endAttract();
     run.beginDay();
     this.mode = 'tutorial';
     this.applyDayConfig();
@@ -162,6 +231,7 @@ export class Game {
 
   beginDay() {
     const { run } = this;
+    this.endAttract();
     run.beginDay();
     this.applyDayConfig();
     this.car.reset(this.world.hq.spawn);

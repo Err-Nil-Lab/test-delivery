@@ -264,6 +264,15 @@ export const CONFIG = {
     truckDistance: 48, // mobil derek mulai sejauh ini dari van, di sisi HQ
   },
 
+  // Main menu (mode pamer): van menyetir sendiri, waktu bergulir dari pagi ke malam.
+  attract: {
+    enabled: true,
+    startHour: 8,
+    endHour: 21,
+    cycleSeconds: 110, // satu putaran pagi → malam
+    idleSeconds: 20, // diam selama ini → menu memudar, mode pamer
+  },
+
   // "Zeus LIVE": reaksi Zeus di pojok layar (ejek saat badai, marah saat masuk wilayahnya). ?zeus=0 mematikan.
   zeusCam: {
     enabled: true,

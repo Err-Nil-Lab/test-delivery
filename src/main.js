@@ -12,6 +12,7 @@ import { ZeusCam } from './ui/zeusCam.js';
 import { loadSettings, saveSettings, applySettings } from './ui/settings.js';
 import { Cutscene, openingShots } from './ui/cutscene.js';
 import { Dialogue } from './ui/dialogue.js';
+import { MainMenu } from './ui/mainmenu.js';
 
 const STEP = 1 / 60;
 const params = new URLSearchParams(window.location.search);
@@ -63,6 +64,7 @@ const ftueDone = () => {
   }
 };
 function startFtue() {
+  closeMenu();
   screens.hide();
   cutscene.play(openingShots(game.world)).then(() => game.beginTutorial());
 }
@@ -94,19 +96,46 @@ let paused = false;
 
 const downloadLog = () => downloadJSON({ seed, ...game.telemetry.toJSON() }, `hermes-express-playtest-${seed}.json`);
 
+// Main menu sinematik (van menyetir sendiri). ?menu=0 memakai kartu intro lama (dipakai tes).
+let menu = null;
+const useMenu = params.get('menu') !== '0' && game.cfg.attract.enabled;
+
+function closeMenu() {
+  if (!menu) return;
+  menu.destroy();
+  menu = null;
+  document.body.classList.remove('menu-open');
+  view.setShowcase(false);
+  game.parkAtHq();
+  view.snapCamera();
+}
+
 function showIntro() {
   const trained = ftueDone();
-  screens.showIntro({
+  const start = () => {
+    closeMenu();
+    if (!trained) {
+      startFtue();
+      return;
+    }
+    screens.hide();
+    game.beginDay();
+  };
+  if (!useMenu) {
+    screens.showIntro({ trained, onStart: start, onTutorial: startFtue });
+    return;
+  }
+  game.beginAttract();
+  document.body.classList.add('menu-open');
+  view.setShowcase(true);
+  view.snapCamera();
+  menu = new MainMenu(app, game, {
     trained,
-    onStart: () => {
-      if (!trained) {
-        startFtue();
-        return;
-      }
-      screens.hide();
-      game.beginDay();
-    },
+    idleSeconds: game.cfg.attract.idleSeconds,
+    blocked: () => Boolean(screens.current),
+    onStart: start,
     onTutorial: startFtue,
+    onSettings: () => screens.showSettings(settings, { onChange: setSetting, onBack: () => screens.hide() }),
   });
 }
 
@@ -200,10 +229,19 @@ function frame(now) {
       game.step(STEP, input.controls());
       acc -= STEP;
     }
+  } else if (menu && game.attractActive && !paused) {
+    // Menu: van menyetir sendiri (langkah tetap supaya fisika stabil).
+    acc += dt;
+    while (acc >= STEP) {
+      game.updateAttract(STEP);
+      acc -= STEP;
+    }
+    input.clearPresses();
   } else {
     acc = 0;
     input.clearPresses();
   }
+  menu?.update(dt);
   cutscene.update(dt);
   tutorialDialogue.update(dt);
   view.update(dt);
@@ -225,6 +263,7 @@ window.__hex = {
   audio,
   zeusCam,
   cutscene,
+  menu: () => menu,
   state: () => ({
     run: game.run.state,
     day: game.run.day,

@@ -52,6 +52,7 @@ URL bisa diberi parameter:
 |---|---|
 | `?seed=123` | Run deterministik: spawn paket dan petir sama persis setiap kali |
 | `?debug=1` | Panel debug langsung terbuka (bisa juga dibuka dengan tombol <kbd>`</kbd>) |
+| `?menu=0` | Pakai kartu intro lama (tanpa main menu sinematik); dipakai tes e2e |
 | `?tutorial=1` / `?tutorial=0` | Paksa / lewati FTUE (cutscene + Hari Pelatihan) |
 | `?view=chase` / `?view=iso` | Kamera third person / isometric (hanya untuk sesi itu) |
 | `?zeus=0` | Matikan reaksi "Zeus LIVE" di pojok layar |
@@ -103,6 +104,20 @@ Pemain baru tidak langsung dilempar ke Day 1 dengan semua sistem sekaligus.
 - **Hanya sekali:** FTUE otomatis hanya untuk pemain baru (disimpan di browser, `hex.ftue`).
 - **Mengulang:** intro menampilkan "🎓 Ulangi pelatihan".
 - **Melewati:** pause punya "⏭ Lewati pelatihan".
+
+## Main menu sinematik & mode pamer
+
+Layar awal sekarang main menu: **van menyetir sendiri** keliling map di belakang logo HERMES EXPRESS, dengan kamera sinematik
+yang berganti shot tiap 7 sampai 9 detik (chase rendah, orbit, helikopter, depan-samping, top-down miring, tracking dari
+pinggir jalan). Jam map bergulir pagi → senja → malam dalam ±110 detik lalu kembali ke pagi dengan fade hitam.
+
+- Tombol: ▶ Mulai, 🎓 Pelatihan (atau Ulangi), ⚙ Pengaturan, 🎬 Mode pamer. Bisa dengan mouse atau <kbd>↑</kbd>/<kbd>↓</kbd> + <kbd>Enter</kbd>. Tombol ⓘ membuka cerita latar.
+- **Mode pamer:** otomatis setelah idle ±20 detik (atau tombol 🎬). Menu memudar, tersisa letterbox, logo kecil, dan caption nama tempat + jam. Tombol, klik, atau gerakan mouse memunculkan menu lagi. Cocok dibiarkan jalan di layar demo.
+- Musik dan suara mesin hidup di menu (setelah input pertama, aturan autoplay browser) dan mengikuti jam map.
+
+Autopilot (`src/sim/autopilot.js`) memakai graf jalan dan A* yang sama dengan GPS, pure pursuit lewat fisika van asli (bukan animasi
+palsu), mengerem sebelum tikungan, sesekali handbrake-drift, menghindari mobil NPC di depan, dan memindahkan van ke jalur bila tersangkut.
+Selama menu, tidak ada damage, uang, paket, ataupun petir; menekan Mulai memulai run yang bersih.
 
 ## Perspektif kamera
 
@@ -394,6 +409,7 @@ src/
     upgrades.js    Bengkel Hephaestus (upgrade) + titah dewa harian
     rival.js       Iris Express: mengincar, mencuri, menjatuhkan paket
     tutorial.js    Hari Pelatihan (FTUE): langkah-langkah Hestia
+    autopilot.js   Auto-driving main menu: rute A*, pure pursuit, drift, hindari NPC, pulih bila tersangkut
     midnight.js    Tengah malam: petir raksasa → lumpuh → mobil derek
     lanes.js       lajur mobil (loop per jalan) dan trotoar untuk NPC
     traffic.js     lalu lintas NPC: ikut lajur, mengerem, menyalip, terpental saat ditabrak
@@ -409,7 +425,7 @@ src/
   render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur, NPC & burung,
                    juice (shake/hitstop/zoom), particle pool, teks melayang, efek per event
   audio/           WebAudio: synth, resep SFX, mesin van, musik prosedural
-  ui/              HUD, minimap, Zeus LIVE, cutscene & dialog (Hestia), layar intro/laporan/bengkel/pause, panel debug
+  ui/              HUD, minimap, Zeus LIVE, cutscene & dialog (Hestia), main menu sinematik, layar intro/laporan/bengkel/pause, panel debug
 tests/             unit test (Vitest)
 e2e/               smoke test di browser (Playwright)
 ```
@@ -419,5 +435,5 @@ e2e/               smoke test di browser (Playwright)
 ```bash
 npm test                       # unit test logika + map (semua titik bisa dicapai, van tidak bisa terjebak, plant hanya lewat jalan)
 npx playwright install chromium   # sekali saja, untuk e2e
-npm run test:e2e               # smoke test: intro → Zeus → blessing hilang → senja → badai → laporan → Day 2
+npm run test:e2e               # smoke test: main menu (auto-driving, mode pamer) → intro → Zeus → blessing hilang → senja → badai → laporan → Day 2
 ```

@@ -1788,3 +1788,250 @@ body.cinematic .labels {
 .hud-fade.show {
   opacity: 1;
 }
+
+/* ---------- Main menu sinematik + mode pamer ---------- */
+.mainmenu {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  color: var(--ink);
+  transition: opacity 0.4s;
+}
+.mainmenu.away {
+  opacity: 0;
+}
+.mainmenu > * {
+  position: absolute;
+}
+.mm-vignette {
+  inset: 0;
+  background: linear-gradient(90deg, rgba(8, 10, 22, 0.72) 0%, rgba(8, 10, 22, 0.35) 38%, rgba(8, 10, 22, 0) 62%),
+    radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+  transition: opacity 0.8s;
+}
+.mm-logo {
+  left: clamp(20px, 6vw, 84px);
+  top: clamp(24px, 9vh, 96px);
+  transition: transform 0.8s, opacity 0.8s;
+  transform-origin: top left;
+}
+.mm-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.mm-bolt {
+  width: 52px;
+  height: 52px;
+  color: var(--zeus);
+  filter: drop-shadow(0 0 10px rgba(255, 216, 74, 0.85)) drop-shadow(0 0 28px rgba(255, 216, 74, 0.5));
+  animation: mm-pulse 2.6s ease-in-out infinite;
+}
+.mm-sandal {
+  width: 92px;
+  height: 38px;
+  color: #cfe0ff;
+  filter: drop-shadow(0 0 8px rgba(122, 167, 255, 0.7));
+  animation: mm-float 3.4s ease-in-out infinite;
+}
+.mm-logo h1 {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 0.92;
+  font-size: clamp(44px, 8vw, 96px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  font-style: italic;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 36px rgba(122, 167, 255, 0.4);
+}
+.mm-logo h1 .ex {
+  color: var(--zeus);
+  font-size: 0.72em;
+  letter-spacing: 0.16em;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 30px rgba(255, 216, 74, 0.55);
+}
+.mm-logo p {
+  margin: 14px 0 0;
+  font-size: clamp(14px, 1.6vw, 20px);
+  color: var(--ink-dim);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.mm-buttons {
+  left: clamp(20px, 6vw, 84px);
+  bottom: clamp(70px, 14vh, 140px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(300px, 70vw);
+  pointer-events: auto;
+  transition: transform 0.6s, opacity 0.6s;
+}
+.mm-buttons button {
+  text-align: left;
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 4px solid transparent;
+  border-radius: 10px;
+  background: rgba(14, 16, 30, 0.55);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+.mm-buttons button.mm-primary {
+  font-size: 22px;
+  background: rgba(59, 111, 182, 0.7);
+}
+.mm-buttons button.focus {
+  transform: translateX(10px);
+  background: rgba(255, 216, 74, 0.2);
+  border-left-color: var(--zeus);
+}
+.mm-buttons button.mm-primary.focus {
+  background: rgba(255, 216, 74, 0.32);
+}
+.mm-info {
+  right: 20px;
+  top: 20px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(14, 16, 30, 0.55);
+  color: var(--ink);
+  font-size: 20px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 0.6s;
+}
+.mm-story {
+  right: 20px;
+  top: 68px;
+  width: min(380px, 80vw);
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(14, 16, 30, 0.78);
+  font-size: 14px;
+  line-height: 1.5;
+  pointer-events: auto;
+}
+.mm-story.hidden {
+  display: none;
+}
+.mm-story p {
+  margin: 0 0 8px;
+}
+.mm-caption {
+  left: clamp(20px, 6vw, 84px);
+  bottom: clamp(20px, 4vh, 40px);
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  transition: transform 0.8s;
+}
+.mm-place {
+  font-size: 18px;
+  letter-spacing: 0.2em;
+}
+.mm-place.swap {
+  animation: mm-swap 0.9s ease-out;
+}
+.mm-clock {
+  color: var(--ink-dim);
+}
+.mm-hint {
+  right: 24px;
+  bottom: 22px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  opacity: 0;
+  transition: opacity 0.8s;
+}
+.mm-bars {
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #000;
+  transition: height 0.9s ease;
+}
+.mm-bars.top {
+  top: 0;
+}
+.mm-bars.bottom {
+  bottom: 0;
+}
+.mm-fade {
+  inset: 0;
+  background: #000;
+  opacity: 0;
+}
+
+/* Mode pamer: menu memudar, tersisa letterbox, logo kecil, dan caption lokasi. */
+.mainmenu.showcase .mm-bars {
+  height: 9vh;
+}
+.mainmenu.showcase .mm-vignette {
+  opacity: 0.25;
+}
+.mainmenu.showcase .mm-buttons {
+  opacity: 0;
+  transform: translateX(-40px);
+  pointer-events: none;
+}
+.mainmenu.showcase .mm-info,
+.mainmenu.showcase .mm-story,
+.mainmenu.showcase .mm-logo p,
+.mainmenu.showcase .mm-sandal {
+  opacity: 0;
+  pointer-events: none;
+}
+.mainmenu.showcase .mm-logo {
+  transform: scale(0.34);
+  top: calc(9vh + 14px);
+}
+.mainmenu.showcase .mm-caption {
+  transform: translateY(-9vh);
+}
+.mainmenu.showcase .mm-hint {
+  opacity: 0.85;
+}
+
+@keyframes mm-pulse {
+  50% {
+    filter: drop-shadow(0 0 16px rgba(255, 216, 74, 1)) drop-shadow(0 0 40px rgba(255, 216, 74, 0.7));
+  }
+}
+@keyframes mm-float {
+  50% {
+    transform: translateY(-5px) rotate(-3deg);
+  }
+}
+@keyframes mm-swap {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mm-bolt,
+  .mm-sandal {
+    animation: none;
+  }
+}
+@media (max-width: 640px) {
+  .mm-sandal {
+    display: none;
+  }
+}
+/* Label nama tempat di dunia disembunyikan selama menu supaya tidak menumpuk dengan logo. */
+.menu-open .labels {
+  display: none;
+}

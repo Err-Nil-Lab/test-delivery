@@ -6,7 +6,7 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
-  await page.goto('/?seed=7&tutorial=0');
+  await page.goto('/?seed=7&tutorial=0&menu=0');
   await expect(page.getByRole('button', { name: /Mulai/ })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(page.locator('.hud-clock')).toContainText('06:');
@@ -73,7 +73,7 @@ test('core loop: intro → setir → Zeus → blessing hilang → senja → bada
 test('audio: menyala setelah input pertama, musik & mesin berjalan, M untuk mute', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('/?seed=3&tutorial=0');
+  await page.goto('/?seed=3&tutorial=0&menu=0');
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__hex.audio.ctx?.state)).toBe('running');
   await page.keyboard.down('KeyW');
@@ -104,8 +104,9 @@ test('FTUE: cutscene → Hari Pelatihan bersama Hestia → Day 1', async ({ page
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto('/?seed=5&tutorial=1');
-  await expect(page.locator('.screen.intro')).toBeVisible();
-  await page.keyboard.press('Enter');
+  await expect(page.locator('.mainmenu')).toBeVisible();
+  await page.keyboard.press('Enter'); // ▶ Mulai di main menu
+  await expect(page.locator('.mainmenu')).toHaveCount(0);
 
   // Cutscene: letterbox + caption, bisa dilewati dengan Esc.
   await expect(page.locator('.cutscene')).toBeVisible();
@@ -188,7 +189,7 @@ test('tengah malam: peringatan → petir raksasa → lumpuh → derek → lapora
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.goto('/?seed=9&tutorial=0');
+  await page.goto('/?seed=9&tutorial=0&menu=0');
   await page.keyboard.press('Enter');
   await expect(page.locator('.hud-clock')).toContainText('06:');
   await page.evaluate(() => {
@@ -209,7 +210,7 @@ test('kamera third person: ?view=chase, tombol V mengganti mode, tanpa error', a
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.goto('/?seed=2&tutorial=0&view=chase');
+  await page.goto('/?seed=2&tutorial=0&view=chase&menu=0');
   await page.keyboard.press('Enter');
   await expect(page.locator('.hud-clock')).toContainText('06:');
   const mode = () => page.evaluate(() => ({ p: window.__hex.view.perspective, persp: Boolean(window.__hex.view.camera.isPerspectiveCamera) }));
@@ -221,5 +222,38 @@ test('kamera third person: ?view=chase, tombol V mengganti mode, tanpa error', a
   await expect.poll(mode, { timeout: 15_000 }).toEqual({ p: 'iso', persp: false });
   await page.keyboard.press('KeyV');
   await expect.poll(mode, { timeout: 15_000 }).toEqual({ p: 'chase', persp: true });
+  expect(errors).toEqual([]);
+});
+
+test('Main menu: van menyetir sendiri, mode pamer saat idle, Mulai masuk Day 1', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?seed=4&tutorial=0');
+  const menu = page.locator('.mainmenu');
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('h1')).toContainText('HERMES');
+  await expect(menu.locator('.mm-buttons button')).toHaveCount(4);
+
+  // Van bergerak sendiri (bukan animasi palsu: posisi sim berubah).
+  const pos = () => page.evaluate(() => ({ x: window.__hex.game.car.x, z: window.__hex.game.car.z }));
+  const a = await pos();
+  await expect.poll(async () => { const b = await pos(); return Math.hypot(b.x - a.x, b.z - a.z); }, { timeout: 60_000 }).toBeGreaterThan(8);
+  await expect(menu.locator('.mm-place')).not.toBeEmpty();
+
+  // Mode pamer: tombol 🎬 menyembunyikan menu; gerakan mouse memunculkannya lagi.
+  await menu.locator('[data-act="showcase"]').click();
+  await expect(menu).toHaveClass(/showcase/);
+  await page.mouse.move(200, 200);
+  await page.mouse.move(260, 240);
+  await expect(menu).not.toHaveClass(/showcase/);
+
+  // Mulai → Day 1 berjalan dan run bersih (tanpa damage / uang dari menu).
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.__hex.state().run), { timeout: 30_000 }).toBe('day');
+  const run = await page.evaluate(() => ({ wallet: window.__hex.game.run.wallet, hour: window.__hex.game.clock.hour }));
+  expect(run.hour).toBeLessThan(9);
   expect(errors).toEqual([]);
 });

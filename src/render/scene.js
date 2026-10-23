@@ -16,6 +16,7 @@ import { Birds } from './birds.js';
 import { RouteView } from './routeView.js';
 import { TowView } from './towView.js';
 import { chasePose, targetYaw, smoothYaw } from './chaseCam.js';
+import { shotAt, shotAnchor, showcasePose } from './showcaseCam.js';
 
 const ISO_OFFSET = new THREE.Vector3(1, 1.1, 1).normalize().multiplyScalar(140);
 const SUN_OFFSET = new THREE.Vector3(-30, 60, 20);
@@ -113,6 +114,13 @@ export class View {
     this.target = new THREE.Vector3(game.car.x, 0, game.car.z);
     // Kamera sinematik (cutscene / pan tutorial): { x, z, zoom } menggantikan kamera-ikut-van.
     this.cinematic = null;
+    // Kamera menu / mode pamer: shot sinematik berganti otomatis mengikuti van yang menyetir sendiri.
+    this.showcase = false;
+    this.showcaseTime = 0;
+    this.showcaseShot = -1;
+    this.showcaseAnchor = null;
+    this.showcasePos = null;
+    this.showcaseLook = null;
     this.camZoom = 1;
     this.flash = 0;
     game.bus.on('strike', (s) => {
@@ -164,7 +172,16 @@ export class View {
   }
 
   get chase() {
-    return this.perspective === 'chase' && !this.cinematic;
+    return (this.perspective === 'chase' || this.showcase) && !this.cinematic;
+  }
+
+  setShowcase(on) {
+    if (this.showcase === on) return;
+    this.showcase = on;
+    this.showcaseTime = 0;
+    this.showcaseShot = -1;
+    this.showcasePos = null;
+    this.chaseYaw = this.game.car.heading;
   }
 
   snapTo(p) {
@@ -195,7 +212,31 @@ export class View {
     const shake = this.juice.offset;
     const chase = this.chase;
     this.camera = chase ? this.chaseCamera : this.isoCamera;
-    if (chase) {
+    if (chase && this.showcase) {
+      // Menu / mode pamer: shot sinematik, pose dihaluskan supaya perpindahan antar shot mulus.
+      this.showcaseTime += dt;
+      const s = shotAt(this.showcaseTime);
+      const pos = { x: car.x, y: car.y ?? world.heightAt(car.x, car.z), z: car.z };
+      if (s.index !== this.showcaseShot) {
+        this.showcaseShot = s.index;
+        this.showcaseAnchor = shotAnchor(s.shot, pos, car.heading);
+      }
+      const pose = showcasePose(s, { ...car, x: car.x, z: car.z, y: pos.y, heading: car.heading }, this.showcaseAnchor, world.heightAt, car.speed / this.game.cfg.car.maxSpeed);
+      const k = 1 - Math.exp(-(this.showcasePos ? 3.2 : 100) * dt);
+      this.showcasePos ??= { ...pose.position };
+      this.showcaseLook ??= { ...pose.look };
+      for (const key of ['x', 'y', 'z']) {
+        this.showcasePos[key] += (pose.position[key] - this.showcasePos[key]) * k;
+        this.showcaseLook[key] += (pose.look[key] - this.showcaseLook[key]) * k;
+      }
+      this.target.set(pos.x, pos.y, pos.z);
+      this.camera.position.set(this.showcasePos.x, this.showcasePos.y, this.showcasePos.z);
+      this.camera.lookAt(this.showcaseLook.x, this.showcaseLook.y, this.showcaseLook.z);
+      if (Math.abs(this.camera.fov - pose.fov) > 0.01) {
+        this.camera.fov += (pose.fov - this.camera.fov) * k;
+        this.camera.updateProjectionMatrix();
+      }
+    } else if (chase) {
       // Third person: kamera menempel di belakang van, arahnya menyusul arah van dengan halus.
       const pos = { x: car.x, y: car.y ?? world.heightAt(car.x, car.z), z: car.z };
       this.chaseYaw = smoothYaw(this.chaseYaw, targetYaw(car), dt);
