@@ -52,7 +52,7 @@ export class Screens {
       <h1>Hermes Express</h1>
       <p class="lead">Dulu kamu satu-satunya messenger Zeus dan Hera. Lalu satu paket salah kirim, dan semuanya berantakan.
       Status dewamu dicabut, sandal bersayapmu disita. Kini kamu mengantar paket para dewa dengan van tua.</p>
-      <p class="goal">🎯 Penuhi <b>quota profit</b> tiap hari selama <b>7 hari</b>, lalu pulang ke HQ sebelum badai Zeus.</p>
+      <p class="goal">🎯 Penuhi <b>quota profit</b> tiap hari selama <b>7 hari</b>, lalu hadapi Charon di hari ke-8. Pulang ke HQ sebelum badai Zeus.</p>
       <ul class="controls">
         <li><kbd>W</kbd><kbd>S</kbd> gas & rem · <kbd>A</kbd><kbd>D</kbd> belok</li>
         <li>Berhenti di lingkaran + <kbd>E</kbd> ambil / antar paket</li>
@@ -72,7 +72,12 @@ export class Screens {
           .join('')
       : '<li class="muted">Tidak ada kerusakan. Mulus!</li>';
     const undeliveredNote = report.undelivered.length ? ` (${report.undelivered.length} paket)` : '';
-    const verdict = report.pass
+    const race = report.race;
+    const verdict = race
+      ? report.pass
+        ? `<div class="verdict pass">HERMES MENANG<small>${race.hermes} jiwa vs ${race.iris} jiwa Iris. Charon menyingkir.</small></div>`
+        : `<div class="verdict fail">IRIS MENANG<small>${race.hermes} jiwa vs ${race.iris} jiwa (target ${race.target}). Iris melambai dari kejauhan.</small></div>`
+      : report.pass
       ? `<div class="verdict pass">LOLOS QUOTA<small>${run.isFinalDay ? 'Hari terakhir selesai!' : 'Para dewa mengangguk… sedikit.'}</small></div>`
       : `<div class="verdict fail">GAGAL QUOTA<small>Para dewa kecewa. Hermes tetap manusia biasa.</small></div>`;
     const next = !report.pass ? 'Ulang dari Day 1' : run.isFinalDay ? 'Lihat hasil' : '🔨 Ke Bengkel Hephaestus';
@@ -90,9 +95,9 @@ export class Screens {
         <tr><td>Undelivered offering${undeliveredNote}</td><td data-count="${-report.undeliveredLoss}">${money(-report.undeliveredLoss)}</td></tr>
         ${report.towed ? `<tr><td>Biaya derek</td><td>${money(-report.towFee)}</td></tr>` : ''}
         <tr class="total"><td>Profit</td><td data-count="${report.profit}">${money(report.profit)}</td></tr>
-        <tr class="quota"><td>Quota hari ini</td><td>$${report.quota}</td></tr>
+        ${race ? `<tr class="quota"><td>Balapan jiwa (target ${race.target})</td><td>${race.hermes} vs ${race.iris}</td></tr>` : `<tr class="quota"><td>Quota hari ini</td><td>$${report.quota}</td></tr>`}
       </table>
-      <div class="report-bar ${report.pass ? 'pass' : 'fail'}"><i style="width:${Math.min(100, (Math.max(0, report.profit) / Math.max(report.quota * 1.25, report.profit, 1)) * 100).toFixed(1)}%"></i><b style="left:${((report.quota / Math.max(report.quota * 1.25, report.profit, 1)) * 100).toFixed(1)}%"></b></div>
+      <div class="report-bar ${report.pass ? 'pass' : 'fail'}" ${race ? 'hidden' : ''}><i style="width:${Math.min(100, (Math.max(0, report.profit) / Math.max(report.quota * 1.25, report.profit, 1)) * 100).toFixed(1)}%"></i><b style="left:${((report.quota / Math.max(report.quota * 1.25, report.profit, 1)) * 100).toFixed(1)}%"></b></div>
       <details ${report.damageEvents.length ? 'open' : ''}><summary>Rincian damage</summary><ul class="damage-list">${damageRows}</ul></details>
       ${verdict}
       <p class="muted">Dompet: ${money(run.wallet)}</p>
@@ -120,7 +125,7 @@ export class Screens {
     const total = run.history.reduce((sum, r) => sum + r.profit, 0);
     this.show(
       'win',
-      `<p class="eyebrow">7 hari selesai</p>
+      `<p class="eyebrow">${run.history.length} hari selesai · Charon dikalahkan</p>
       <h1>Selangkah lebih dekat ke status dewa</h1>
       <p class="lead">Total profit ${money(total)}. Zeus mengakui kerjamu… untuk sekarang.</p>
       <p class="teaser">Kabar dari bawah tanah: Hades sedang mencari kurir baru…</p>

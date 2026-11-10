@@ -43,6 +43,18 @@ export class Hud {
     this.profitQuota = this.profitEl.querySelector('.quota');
     this.profitBreakdown = this.profitEl.querySelector('.breakdown');
 
+    // ---- Hari Charon: bar balapan jiwa Hermes vs Iris ----
+    this.raceEl = el('div', 'hud-race', this.root);
+    this.raceEl.innerHTML =
+      '<div class="race-title">💀 HARI CHARON · balapan jiwa</div>' +
+      '<div class="race-row hermes"><span class="who">Hermes</span><div class="bar"><i></i></div><b class="n"></b></div>' +
+      '<div class="race-row iris"><span class="who">Iris</span><div class="bar"><i></i></div><b class="n"></b></div>';
+    this.raceFill = {
+      hermes: this.raceEl.querySelector('.hermes .bar i'),
+      iris: this.raceEl.querySelector('.iris .bar i'),
+    };
+    this.raceNum = { hermes: this.raceEl.querySelector('.hermes .n'), iris: this.raceEl.querySelector('.iris .n') };
+
     // ---- Tingkat 1: cargo + chip status ----
     const right = el('div', 'hud-panel hud-right', this.root);
     el('div', 'hud-caption', right).textContent = 'Cargo';
@@ -84,7 +96,15 @@ export class Hud {
 
     const { bus } = game;
     // Banner hanya untuk momen besar. Titah dewa diumumkan Zeus LIVE + chip di panel Shift.
-    bus.on('day_start', ({ quota }) => this.banner(`DAY ${game.run.day} / ${game.cfg.run.days}`, `Quota profit hari ini $${quota}`, 'day', 2.5));
+    bus.on('day_start', ({ quota, boss }) =>
+      boss
+        ? this.banner(`DAY ${game.run.day} / ${game.cfg.run.days} · CHARON`, `Antar ${game.cfg.charon.target} jiwa lebih dulu dari Iris Express!`, 'storm', 3.5)
+        : this.banner(`DAY ${game.run.day} / ${game.cfg.run.days}`, `Quota profit hari ini $${quota}`, 'day', 2.5),
+    );
+    bus.on('iris_soul', ({ iris }) => {
+      this.toast(`🟣 Iris mengantar jiwa ke-${iris}!`, 'iris', 1.6);
+      this.pulse(this.raceEl, 'bump');
+    });
     bus.on('phase', ({ phase }) => {
       if (phase === PHASE.DUSK) this.banner('SENJA', 'Pulang ke HQ!', 'dusk', 2.5);
       if (phase === PHASE.STORM) this.banner('BADAI ZEUS MEMBURU', 'Pulang ke HQ sekarang!', 'storm', 2.5);
@@ -276,6 +296,19 @@ export class Hud {
     return '';
   }
 
+  updateRace() {
+    const { game } = this;
+    const race = game.race;
+    const on = race.active && game.run.state === 'day';
+    this.raceEl.classList.toggle('show', on);
+    if (!on) return;
+    const hermes = game.packages.delivered.length;
+    for (const [who, n] of [['hermes', hermes], ['iris', race.iris]]) {
+      this.raceFill[who].style.width = `${Math.min(100, (n / race.target) * 100).toFixed(1)}%`;
+      this.setText(this.raceNum[who], `${n} / ${race.target}`);
+    }
+  }
+
   updateShift() {
     const { game } = this;
     const { run, clock } = game;
@@ -437,6 +470,7 @@ export class Hud {
     if (!visible) return;
 
     this.updateShift();
+    this.updateRace();
     this.updateCargo();
     this.updateCombo();
     const objective = this.objectiveText();

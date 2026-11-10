@@ -15,6 +15,7 @@ export class PackageSystem {
     this.rng = rng;
     this.bus = bus;
     this.nextId = 1;
+    this.soulPay = null; // Hari boss Charon: semua paket identik (jiwa) dengan bayaran tetap
     this.autoSpawn = true; // Hari Pelatihan: paket hanya dimunculkan oleh langkah tutorial
     this.resetDay({ scripted: false, spawnInitial: false });
   }
@@ -31,6 +32,13 @@ export class PackageSystem {
     this.day = day;
     this.scripted = scripted;
     if (!spawnInitial) return;
+    if (this.soulPay != null) {
+      if (near) this.spawnNear(near);
+      while (this.waiting.length < this.cfg.initialWaiting) {
+        if (!this.spawnRandom({ allowZeus: false })) break;
+      }
+      return;
+    }
     if (scripted) {
       const zeus = this.makePackage('zeus', this.world.zeusPickup);
       zeus.lifetime = Infinity;
@@ -154,6 +162,7 @@ export class PackageSystem {
 
   // Paket Zeus selalu diambil di Gerbang Istana Zeus; paket Safe di titik acak.
   spawnRandom({ allowZeus }) {
+    if (this.soulOnly()) allowZeus = false;
     if (allowZeus && this.canSpawnZeus() && this.rng.chance(this.cfg.zeus.chance)) return this.spawnAt('zeus', this.world.zeusPickup);
     if (allowZeus && this.canSpawnCurse() && this.rng.chance(this.curseCfg.chance)) {
       const pkg = this.spawnCurse();
@@ -166,6 +175,11 @@ export class PackageSystem {
       if (pkg) return pkg;
     }
     return this.spawnAt(allowZeus ? this.pickVariant() : 'safe', this.rng.pick(candidates));
+  }
+
+  // Jiwa (hari Charon): selalu paket Safe biasa.
+  soulOnly() {
+    return this.soulPay != null;
   }
 
   canSpawnVariant(type) {
@@ -189,6 +203,7 @@ export class PackageSystem {
 
   // Paket biasa kadang berupa varian Rapuh atau Kilat.
   pickVariant() {
+    if (this.soulOnly()) return 'safe';
     for (const type of ['fragile', 'express']) {
       if (this.canSpawnVariant(type) && this.rng.chance(this.cfg[type].chance)) return type;
     }
@@ -261,6 +276,7 @@ export class PackageSystem {
   basePackage(type, pickup, dest, pay, slots) {
     // Pengali bayaran harian (titah dewa), kecuali paket Zeus yang bayarannya tetap.
     if (type !== 'zeus') pay = round5(pay * (this.cfg.payMultiplier ?? 1));
+    if (this.soulOnly()) pay = this.soulPay;
     return { id: this.nextId++, type, curse: null, slots, pay, pickup, dest, age: 0, lifetime: this.cfg.waitingLifetime };
   }
 

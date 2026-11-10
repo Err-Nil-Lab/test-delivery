@@ -99,14 +99,14 @@ describe('Alur run', () => {
     expect(game.packages.waiting.some((p) => p.type === 'zeus' && p.lifetime === Infinity)).toBe(false);
   });
 
-  it('lolos 7 hari → menang', () => {
+  it('lolos 8 hari (termasuk boss Charon) → menang', () => {
     const game = newGame();
-    for (let day = 1; day <= 7; day++) {
+    for (let day = 1; day <= 8; day++) {
       expect(game.run.day).toBe(day);
       game.endDay();
       game.run.lastReport.pass = true;
       const outcome = game.advance();
-      expect(outcome).toBe(day === 7 ? 'win' : 'next');
+      expect(outcome).toBe(day === 8 ? 'win' : 'next');
     }
     expect(game.run.state).toBe(RUN_STATE.WIN);
   });

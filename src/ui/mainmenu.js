@@ -6,7 +6,7 @@ const BOLT = `<svg class="mm-bolt" viewBox="0 0 64 64" aria-hidden="true"><path 
 const SANDAL = `<svg class="mm-sandal" viewBox="0 0 120 48" aria-hidden="true"><path d="M8 34c14 6 40 8 70 2l14-6c4-2 8 0 8 4 0 5-6 8-14 10-28 6-60 4-78-6z" fill="currentColor"/><path d="M40 28c-8-2-18-8-30-6 8-8 22-8 34-2zM48 26c-6-6-14-14-28-16 12-4 26 0 36 12z" fill="currentColor" opacity=".8"/></svg>`;
 
 const BACKSTORY =
-  'Dulu kamu satu-satunya messenger Zeus dan Hera. Lalu satu paket salah kirim, dan semuanya berantakan. Status dewamu dicabut, sandal bersayapmu disita. Kini kamu mengantar paket para dewa dengan van tua. Penuhi quota profit tiap hari selama 7 hari, lalu pulang ke HQ sebelum badai Zeus.';
+  'Dulu kamu satu-satunya messenger Zeus dan Hera. Lalu satu paket salah kirim, dan semuanya berantakan. Status dewamu dicabut, sandal bersayapmu disita. Kini kamu mengantar paket para dewa dengan van tua. Penuhi quota profit tiap hari selama 7 hari, lalu hadapi Charon di hari ke-8 dan kalahkan Iris Express dalam balapan jiwa.';
 
 // Lokasi terdekat dari posisi van (label map).
 export function nearestLabel(world, x, z, maxDist = 260) {

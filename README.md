@@ -317,7 +317,7 @@ Supaya menyetir terasa konyol dan seru:
 | Badai pemburu | Mulai 20:00, menyasar posisi van di seluruh kota, makin rapat sampai van masuk HQ |
 | Damage | Tanpa HP. Tabrakan (termasuk menabrak undakan), petir, serudukan Minotaur, dan pendaratan keras menambah tagihan repair. Van punya 3 state visual; setelah state 3 muncul asap dan percikan. Angkanya baru terlihat di laporan |
 | Laporan | Income − damage − 10% bayaran paket yang masih dibawa (− biaya derek) = profit. Profit ≥ quota → lanjut, kurang → ulang dari Day 1 |
-| Run | 7 hari. Day 1 di run pertama di-script sebagai tutorial: paket Zeus dijamin menunggu di Gerbang Istana, dan panah ⚡ menunjukkan arahnya |
+| Run | 8 hari (Day 8 = boss Charon, lihat bawah). Day 1 di run pertama di-script sebagai tutorial: paket Zeus dijamin menunggu di Gerbang Istana, dan panah ⚡ menunjukkan arahnya |
 
 ## Suara dan juice
 
@@ -420,7 +420,7 @@ src/
     packages.js    spawn, cargo/slot, ambil/antar, blessing
     hazards.js     petir zona dan badai pemburu
     damage.js      catatan damage dan state visual
-    run.js         struktur 7 hari, quota, laporan
+    run.js         struktur 8 hari, quota, laporan
     events.js      event bus + telemetri playtest
   render/          three.js: kamera isometric, medan gunung, jalan, gedung, van, marker, petir, Minotaur, NPC & burung,
                    juice (shake/hitstop/zoom), particle pool, teks melayang, efek per event
@@ -437,3 +437,7 @@ npm test                       # unit test logika + map (semua titik bisa dicapa
 npx playwright install chromium   # sekali saja, untuk e2e
 npm run test:e2e               # smoke test: main menu (auto-driving, mode pamer) → intro → Zeus → blessing hilang → senja → badai → laporan → Day 2
 ```
+
+## Hari Boss: Charon (Day 8)
+
+Hari terakhir bukan soal quota. Semua paket sama (**jiwa**, bayaran tetap), muncul banyak dan cepat. **Hermes vs Iris Express** berebut jiwa: bar balapan di tengah atas HUD. Iris menambah jiwa di interval acak (`charon.irisInterval`, kadang beruntun), Hermes menambah lewat mengantar. Yang lebih dulu mencapai `charon.target` menang; pulang/waktu habis sebelum itu = Iris menang. Semua angka ada di `charon` pada `src/config.js`, logika di `src/sim/charon.js`.

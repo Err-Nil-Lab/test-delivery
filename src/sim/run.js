@@ -85,7 +85,7 @@ export class RunState {
 
   endDay(report) {
     this.wallet += report.profit;
-    report.savingsGain = report.pass ? report.profit - report.quota : 0;
+    report.savingsGain = report.pass ? Math.max(0, report.profit - report.quota) : 0;
     this.savings += report.savingsGain;
     this.lastReport = report;
     this.history.push(report);

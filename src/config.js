@@ -4,9 +4,10 @@
 
 export const CONFIG = {
   run: {
-    days: 7,
+    days: 8,
     // Quota profit per hari (Day 1 → Day 7). TODO(GDD): kurva kenaikan quota.
-    quotas: [200, 300, 400, 500, 600, 700, 800],
+    // Day 8 = hari boss Charon: kemenangan ditentukan balapan jiwa, bukan quota.
+    quotas: [200, 300, 400, 500, 600, 700, 800, 0],
   },
 
   time: {
@@ -242,6 +243,18 @@ export const CONFIG = {
       stealable: ['safe', 'fragile', 'express'],
     },
     soundRadius: 45, // suara NPC di luar jarak ini tidak dimainkan
+  },
+
+  // Hari boss Charon: semua paket sama (jiwa), balapan Hermes vs Iris Express.
+  // Pertama yang mencapai `target` jiwa menang. Iris menambah jiwa di interval acak supaya terasa seperti balapan.
+  charon: {
+    day: 8,
+    target: 12, // jiwa yang harus diantar untuk menang
+    soulPay: 40, // bayaran tiap jiwa (tetap)
+    irisInterval: [3.5, 8], // detik acak antar tambahan jiwa Iris
+    irisBurstChance: 0.15, // peluang Iris langsung dapat jiwa lagi (kejar-kejaran)
+    irisStartDelay: [3, 6],
+    packages: { maxWaiting: 10, initialWaiting: 8, spawnInterval: 1.5, waitingLifetime: 90, minTripDistance: 30 },
   },
 
   // Bengkel Hephaestus & titah dewa harian. Kas = profit di atas quota yang terkumpul selama run.

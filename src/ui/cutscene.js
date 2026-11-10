@@ -16,7 +16,7 @@ export function openingShots(world) {
     { at: label('PERUMAHAN ARCADIA'), zoom: 0.75, seconds: 1.6, speaker: 'narrator', text: 'Perumahan Arcadia: dekat dengan HQ.' },
     { at: label('PADANG MINOTAUR'), zoom: 0.75, seconds: 1.8, speaker: 'narrator', text: 'Padang Minotaur: jangan berdiri di depan banteng itu.' },
     { at: world.plant.dropoff, zoom: 0.7, seconds: 2, speaker: 'narrator', text: 'Dan di puncak gunung: Electrical Plant milik Zeus.' },
-    { at: world.hq.spawn, zoom: 1, seconds: 2.6, speaker: 'hestia', text: 'Penuhi quota selama 7 hari… dan mungkin Zeus memaafkanmu. Ayo latihan dulu!' },
+    { at: world.hq.spawn, zoom: 1, seconds: 2.6, speaker: 'hestia', text: 'Penuhi quota selama 7 hari, lalu hadapi Charon… dan mungkin Zeus memaafkanmu. Ayo latihan dulu!' },
   ];
 }
 

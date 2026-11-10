@@ -14,6 +14,7 @@ import { CrowdSystem } from './crowd.js';
 import { StyleSystem } from './style.js';
 import { Navigator } from './navigation.js';
 import { RivalSystem } from './rival.js';
+import { CharonRace } from './charon.js';
 import { UPGRADES, DAY_MODS, MUTABLE_SECTIONS, restoreInPlace } from './upgrades.js';
 import { TutorialDirector, TUTORIAL_QUOTA } from './tutorial.js';
 import { MidnightSequence } from './midnight.js';
@@ -50,6 +51,7 @@ export class Game {
     // Undian bengkel & titah dewa juga punya RNG sendiri.
     this.metaRng = createRng((seed ^ 0x51ed270b) >>> 0);
     this.rival = new RivalSystem(config.npc.rival, npcRng, this.bus);
+    this.race = new CharonRace(config.charon, createRng((seed ^ 0xc4a2011) >>> 0), this.bus);
     this.traffic = new TrafficSystem(this.world, config.npc.traffic, npcRng, this.bus);
     this.crowd = new CrowdSystem(this.world, config.npc, npcRng, this.bus);
     this.npcEnabled = config.npc.enabled;
@@ -82,6 +84,11 @@ export class Game {
   // Quota yang ditampilkan HUD (Hari Pelatihan punya quota latihan sendiri).
   get quota() {
     return this.mode === 'tutorial' ? TUTORIAL_QUOTA : this.run.quota;
+  }
+
+  // Day 8: hari boss Charon (balapan jiwa Hermes vs Iris).
+  get isBoss() {
+    return this.mode === 'normal' && this.run.day === this.cfg.charon.day;
   }
 
   get inHQ() {
@@ -243,6 +250,7 @@ export class Game {
     this.style.reset();
     this.rival.reset();
     this.midnight.reset();
+    this.race.reset();
     this.car.paralyzed = false;
     this.packages.resetDay({ scripted: run.scripted, day: run.day, near: this.car });
     this.steerHistory = [];
@@ -250,7 +258,8 @@ export class Game {
     this.earlyEndUntil = -Infinity;
     this.pendingHints = [];
     this.leftHQ = false;
-    this.bus.emit('day_start', { quota: run.quota, scripted: run.scripted, modifier: run.modifier });
+    if (this.isBoss) this.race.start();
+    this.bus.emit('day_start', { quota: run.quota, scripted: run.scripted, modifier: run.modifier, boss: this.isBoss });
     if (run.modifier) {
       const m = DAY_MODS[run.modifier];
       this.bus.emit('day_modifier', { id: run.modifier, icon: m.icon, name: m.name, desc: m.desc, zeus: m.zeus });
@@ -260,7 +269,8 @@ export class Game {
       this.teach('zeus-start', 'Ambil paket ⚡ Zeus di Gerbang Istana. Ikuti panah di jalan, berhenti di lingkaran, lalu tekan E.');
       this.teach('minotaur', 'Hati-hati: Minotaur di padang menyeruduk van yang lewat. Lihat arah ancang-ancangnya, lalu menghindar!', 14);
     }
-    if (run.day >= 2) this.teach('day2', 'Paket kini muncul acak di seluruh kota. Profit di atas quota masuk Kas bengkel untuk upgrade.');
+    if (this.isBoss) this.teach('charon', '💀 Hari Charon! Semua paket adalah jiwa. Antar lebih banyak dari Iris Express sebelum mereka sampai target.');
+    if (run.day >= 2 && !this.isBoss) this.teach('day2', 'Paket kini muncul acak di seluruh kota. Profit di atas quota masuk Kas bengkel untuk upgrade.');
     if (run.modifier) this.teach('titah', 'Tiap hari ada titah dewa yang mengubah aturan. Lihat chipnya di panel jam.', 5);
   }
 
@@ -283,7 +293,10 @@ export class Game {
     this.dayMods = {};
     const run = this.run;
     run.modifier = null;
-    if (!run.scripted && run.day >= this.cfg.meta.modifiersFromDay) {
+    const boss = this.isBoss;
+    this.packages.soulPay = boss ? this.cfg.charon.soulPay : null;
+    if (boss) Object.assign(this.cfg.packages, this.cfg.charon.packages);
+    if (!run.scripted && !boss && run.day >= this.cfg.meta.modifiersFromDay) {
       const ids = Object.keys(DAY_MODS).filter((id) => id !== run.lastModifier);
       run.modifier = ids[Math.floor(this.metaRng.next() * ids.length)];
       run.lastModifier = run.modifier;
@@ -321,8 +334,8 @@ export class Game {
       const training = this.mode === 'tutorial';
       this.traffic.reset(this.car, {
         density: training ? 0.5 : (this.dayMods.trafficMult ?? 1),
-        minRivals: !training && this.cfg.npc.rival.enabled ? this.cfg.npc.rival.minRivals : 0,
-        allowRivals: !training,
+        minRivals: !training && !this.isBoss && this.cfg.npc.rival.enabled ? this.cfg.npc.rival.minRivals : 0,
+        allowRivals: !training && !this.isBoss,
       });
       this.crowd.reset({ mult: this.dayMods.crowdMult ?? 1 });
     } else {
@@ -401,6 +414,7 @@ export class Game {
     if (phase) this.bus.emit('phase', { phase });
 
     this.packages.update(dt, this.car, hour);
+    if (this.race.active && !training) this.race.update(dt, this.packages.delivered.length, hour);
 
     const hits = training || midnight ? [] : this.hazards.update(dt, {
       car: this.car,
@@ -452,7 +466,7 @@ export class Game {
     if (this.npcEnabled) {
       this.traffic.update(dt, { van: this.car, phase: this.clock.phase, walkers: this.crowd.walkers(), scare: (a, c) => this.crowd.scare(a, c) });
       this.crowd.update(dt, { van: this.car, phase: this.clock.phase });
-      if (!training) this.rival.update(dt, { traffic: this.traffic, packages: this.packages, van: this.car, hour });
+      if (!training && !this.isBoss) this.rival.update(dt, { traffic: this.traffic, packages: this.packages, van: this.car, hour });
     }
     this.style.update(dt, { car: this.car, npcCars: this.traffic.cars });
     this.nav.update(dt, this);
@@ -465,6 +479,7 @@ export class Game {
 
     if (controls.interact) this.interact();
 
+    if (this.race.winner && this.run.state === RUN_STATE.DAY) this.endDay({ towed: false });
     if (this.clock.phase === PHASE.LIMIT && this.run.state === RUN_STATE.DAY) this.midnightReached();
     if (this.midnight.phase === 'done' && this.run.state === RUN_STATE.DAY) this.endDay({ towed: true });
   }
@@ -559,8 +574,16 @@ export class Game {
       towFee: towed ? this.cfg.damage.towFee : 0,
       endHour: this.clock.hour,
     });
+    if (this.race.active) {
+      // Hari boss: lolos = Hermes mencapai target jiwa lebih dulu. Pulang/waktu habis sebelum itu = Iris menang.
+      const winner = this.race.winner ?? 'iris';
+      report.race = { hermes: this.packages.delivered.length, iris: this.race.iris, target: this.race.target, winner };
+      report.pass = winner === 'hermes';
+      this.race.active = false;
+    }
     this.run.endDay(report);
     this.bus.emit('day_end', {
+      race: report.race,
       income: report.income,
       tips: report.tips,
       damageLoss: report.damageLoss,
